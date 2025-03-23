@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -16,9 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspose.PDF" Version="25.2.0" />
-    <PackageReference Include="fo-dicom" Version="5.2.0" />
+    <PackageReference Include="fo-dicom" Version="5.2.1" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.1" />
+    <PackageReference Include="PDFium.forms.x86.v8-xfa" Version="4522.0.6" />
+    <PackageReference Include="PdfiumViewer" Version="2.13.0" />
   </ItemGroup>
 
   <ItemGroup>

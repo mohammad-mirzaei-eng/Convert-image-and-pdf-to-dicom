@@ -1,6 +1,4 @@
-﻿using Aspose.Pdf;
-using Aspose.Pdf.Facades;
-using Convert_to_dcm.Sql;
+﻿using Convert_to_dcm.Sql;
 using Convert_to_dcom.Class;
 using Convert_to_dcom.Class.Helper;
 using FellowOakDicom;
@@ -9,6 +7,7 @@ using FellowOakDicom.IO.Buffer;
 using FellowOakDicom.Network;
 using FellowOakDicom.Network.Client;
 using FileCopyer.Classes.Design_Patterns.Helper;
+using PdfiumViewer;
 using System.Data;
 using Image = System.Drawing.Image;
 using Rectangle = System.Drawing.Rectangle;
@@ -59,7 +58,6 @@ namespace Convert_to_dcm
 
         private void Main_Load(object sender, EventArgs e)
         {
-            InitializePdfViewer(); // Initialize the PDF viewer
             LoadFileModels(); // Load the file models
         }
 
@@ -67,14 +65,6 @@ namespace Convert_to_dcm
         private void LoadFileModels()
         {
             settingsModel = SerializationHelper.LoadSettings();
-        }
-
-        private void InitializePdfViewer()
-        {
-            pdfViewer = new PdfViewer();
-            pdfViewer.CoordinateType = PageCoordinateType.MediaBox; // Use MediaBox instead of User
-            pdfViewer.AutoResize = true; // Set AutoResize to true instead of AutoSize
-            this.Controls.Add(new System.Windows.Forms.Control() { Name = "pdfViewerControl" }); // Add a placeholder control
         }
 
         private void btnselect_Click(object sender, EventArgs e)
@@ -116,30 +106,36 @@ namespace Convert_to_dcm
             {
                 additionalTags = ExecuteSelectQuery(settingsModel, patientModel.PatientID);
             }
-
-            var dicomFile = CreateDicomFile(filePath, patientModel, additionalTags);
-
-            if (dicomFile != null)
+            if (img != null)
             {
-                dicomFile.Save("output.dcm");
-                if (settingsModel != null && settingsModel.ServerPort > 0 && Serverhelper.IsValidIP(settingsModel.ServerAddress))
+                var dicomFile = ConvertImageToDicom(img, patientModel, additionalTags);
+
+                if (dicomFile != null)
                 {
-                    if (Serverhelper.IsServerReachable(settingsModel))
+                    dicomFile.Save("output.dcm");
+                    if (settingsModel != null && settingsModel.ServerPort > 0 && Serverhelper.IsValidIP(settingsModel.ServerAddress))
                     {
-                        // Send the DICOM file to PACS server
-                        var client = DicomClientFactory.Create(settingsModel.ServerAddress, settingsModel.ServerPort, settingsModel.ServerUseTls, settingsModel.ServerTitle, settingsModel.ServerAET);
-                        await client.AddRequestAsync(new DicomCStoreRequest(dicomFile));
-                        await client.SendAsync();
+                        if (Serverhelper.IsServerReachable(settingsModel))
+                        {
+                            // Send the DICOM file to PACS server
+                            var client = DicomClientFactory.Create(settingsModel.ServerAddress, settingsModel.ServerPort, settingsModel.ServerUseTls, settingsModel.ServerTitle, settingsModel.ServerAET);
+                            await client.AddRequestAsync(new DicomCStoreRequest(dicomFile));
+                            await client.SendAsync();
+                        }
+                        else
+                        {
+                            MessageBox.Show("سرور PACS در دسترس نیست", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                     else
                     {
-                        MessageBox.Show("سرور PACS در دسترس نیست", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("شما اول باید تنظیمات پکس را ست کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
-                else
-                {
-                    MessageBox.Show("شما اول باید تنظیمات پکس را ست کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+            }
+            else
+            {
+                MessageBox.Show("فایل پیدا نشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -185,24 +181,8 @@ namespace Convert_to_dcm
             dicomDataset.Add(DicomTag.SeriesTime, currentTime);
         }
 
-        private DicomFile CreateDicomFile(string filePath, PatientModel patientModel, (string StudyInsUID, string SOPClassUID)? additionalTags)
+        private DicomFile ConvertImageToDicom(Bitmap bitmap, PatientModel patientModel, (string StudyInsUID, string SOPClassUID)? additionalTags)
         {
-            var extension = Path.GetExtension(filePath).ToLower();
-            if (extension == ".pdf")
-            {
-                return ConvertPdfToDicom(filePath, patientModel, additionalTags);
-            }
-            else
-            {
-                return ConvertImageToDicom(filePath, patientModel, additionalTags);
-            }
-        }
-
-        private DicomFile ConvertImageToDicom(string imagePath, PatientModel patientModel, (string StudyInsUID, string SOPClassUID)? additionalTags)
-        {
-            // Load the image
-            Bitmap bitmap = new Bitmap(imagePath);
-
             // Create a DICOM file
             var dicomFile = new DicomFile();
             var dicomDataset = dicomFile.Dataset;
@@ -224,65 +204,25 @@ namespace Convert_to_dcm
 
             return dicomFile;
         }
-
-        private DicomFile ConvertPdfToDicom(string pdfPath, PatientModel patientModel, (string StudyInsUID, string SOPClassUID)? additionalTags)
-        {
-            // Load the PDF document
-            using (var document = new Aspose.Pdf.Document(pdfPath))
-            {
-                // Create a DICOM file
-                var dicomFile = new DicomFile();
-                var dicomDataset = dicomFile.Dataset;
-                dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.ExplicitVRLittleEndian;
-
-                // Add necessary DICOM tags
-                AddDicomTags(dicomDataset, 0, 0, PhotometricInterpretation.Monochrome2.Value, 1, patientModel, additionalTags);
-
-                // Convert each page of the PDF to an image and add to DICOM
-                for (int i = 0; i < document.Pages.Count; i++)
-                {
-                    using (var imageStream = new MemoryStream())
-                    {
-                        var resolution = new Aspose.Pdf.Devices.Resolution(300);
-                        var pngDevice = new Aspose.Pdf.Devices.PngDevice(resolution);
-                        pngDevice.Process(document.Pages[i], imageStream);
-                        imageStream.Seek(0, SeekOrigin.Begin);
-
-                        var bitmap = new Bitmap(imageStream);
-                        dicomDataset.AddOrUpdate(DicomTag.Rows, (ushort)bitmap.Height);
-                        dicomDataset.AddOrUpdate(DicomTag.Columns, (ushort)bitmap.Width);
-
-                        // Convert the image to byte array
-                        var pixelData = DicomPixelData.Create(dicomDataset, true);
-                        pixelData.SamplesPerPixel = 1;
-                        pixelData.PlanarConfiguration = PlanarConfiguration.Interleaved;
-                        pixelData.Height = (ushort)bitmap.Height;
-                        pixelData.Width = (ushort)bitmap.Width;
-                        var bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
-                        byte[] pixelBytes = new byte[bitmapData.Stride * bitmapData.Height];
-                        System.Runtime.InteropServices.Marshal.Copy(bitmapData.Scan0, pixelBytes, 0, pixelBytes.Length);
-                        pixelData.AddFrame(new MemoryByteBuffer(pixelBytes));
-                        bitmap.UnlockBits(bitmapData);
-                    }
-                }
-
-                return dicomFile;
-            }
-        }
-
+        Bitmap? img = null;
         private void DisplayImage(string filePath)
         {
-            pic1.Image = Image.FromFile(filePath);
+            img = (Bitmap)Image.FromFile(filePath);
+            pic1.Image = img;
             pic1.Visible = true;
-            pdfViewer.Close(); // Use Close method instead of ClosePdfFile
         }
 
         private void DisplayPdf(string filePath)
         {
-            pdfViewer.Close(); // Use Close method instead of ClosePdfFile
-            pdfViewer.BindPdf(filePath); // Use BindPdf method instead of OpenPdfFile
-            pic1.Visible = false;
-            pic1.Image = null;
+            using (var document = PdfDocument.Load(filePath))
+            {
+                using (var image = document.Render(0, 3000, 3000, false))
+                {
+                    img = (Bitmap?)image;
+                    pic1.Image = img;
+                    pic1.Visible = true;
+                }
+            }
         }
 
         private void btn_Click(object sender, EventArgs e)
@@ -292,12 +232,12 @@ namespace Convert_to_dcm
                 patientModel = new PatientModel();
                 patientModel.PatientName = txtpatientfamily.Text.Trim();
                 patientModel.PatientID = txtpatientId.Text.Trim();
+
                 ConvertToDicomAndSend(imagePath, patientModel);
                 MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 // Clear the image and PDF viewer
                 pic1.Image = null;
                 pic1.Visible = false;
-                pdfViewer.Close(); // Use Close method to close the PDF file
                 imagePath = string.Empty;
             }
             else
