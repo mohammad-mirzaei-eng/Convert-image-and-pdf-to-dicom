@@ -236,21 +236,35 @@ namespace Convert_to_dcm
         {
             if (imagePath != string.Empty && File.Exists(imagePath))
             {
-                patientModel = new PatientModel();
-                patientModel.PatientName = txtpatientfamily.Text.Trim();
-                patientModel.PatientID = txtpatientId.Text.Trim();
+                if (string.IsNullOrEmpty(txtpatientId.Text.Trim()))
+                {
+                    patientModel = new PatientModel();
+                    patientModel.PatientName = txtpatientfamily.Text.Trim();
+                    patientModel.PatientID = txtpatientId.Text.Trim();
 
-                ConvertToDicomAndSend(imagePath, patientModel);
-                MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                // Clear the image and PDF viewer
-                pic1.Image = null;
-                pic1.Visible = false;
-                imagePath = string.Empty;
+                    ConvertToDicomAndSend(imagePath, patientModel);
+                    MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Clear the image and PDF viewer
+                    reset_image_setting();
+                }
+                else
+                {
+                    MessageBox.Show("شماره مراجعه بیمار نمیتواند خالی باشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
             }
             else
             {
                 MessageBox.Show("شما اول باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void reset_image_setting()
+        {
+            pic1.Image = null;
+            pic1.Visible = false;
+            img = null;
+            imagePath = string.Empty;
         }
 
         private void SettingsToolStripMenuItem_Click(object sender, EventArgs e)
