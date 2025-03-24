@@ -210,6 +210,7 @@ namespace Convert_to_dcm
 
             return dicomFile;
         }
+
         Bitmap img;
         private void DisplayImage(string filePath)
         {
@@ -244,7 +245,7 @@ namespace Convert_to_dcm
 
                     ConvertToDicomAndSend(imagePath, patientModel);
                     MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    // Clear the image and PDF viewer
+                    // Clear the image 
                     reset_image_setting();
                 }
                 else
