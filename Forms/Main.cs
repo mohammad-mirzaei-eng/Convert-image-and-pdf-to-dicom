@@ -16,7 +16,6 @@ namespace Convert_to_dcm
 {
     public partial class Main : System.Windows.Forms.Form
     {
-        private PdfViewer pdfViewer; // Add a PdfViewer control
         private SettingsModel settingsModel = new SettingsModel(); // لیست مدل‌های فایل
         PatientModel patientModel; // مدل بیمار
         private string imagePath = string.Empty; // مسیر تصویر
@@ -26,7 +25,6 @@ namespace Convert_to_dcm
         public Main()
         {
             InitializeComponent();
-            pdfViewer = new PdfViewer(); // Initialize pdfViewer in the constructor
             patientModel = new PatientModel(); // Initialize patientModel in the constructor
         }
 
@@ -69,29 +67,37 @@ namespace Convert_to_dcm
 
         private void btnselect_Click(object sender, EventArgs e)
         {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            try
             {
-                openFileDialog.Filter = "PDF And Image|*.pdf;*.jpg;*.jpeg;*.png;*.bmp";
-                openFileDialog.Title = "Select a PDF or Image File";
-
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
-                    imagePath = openFileDialog.FileName;
-                    string extension = Path.GetExtension(imagePath).ToLower();
+                    openFileDialog.Filter = "PDF And Image|*.pdf;*.jpg;*.jpeg;*.png;*.bmp";
+                    openFileDialog.Title = "Select a PDF or Image File";
 
-                    if (extension == ".pdf")
+                    if (openFileDialog.ShowDialog() == DialogResult.OK)
                     {
-                        DisplayPdf(imagePath);
-                    }
-                    else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
-                    {
-                        DisplayImage(imagePath);
-                    }
-                    else
-                    {
-                        MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        imagePath = openFileDialog.FileName;
+                        string extension = Path.GetExtension(imagePath).ToLower();
+
+                        if (extension == ".pdf")
+                        {
+                            DisplayPdf(imagePath);
+                        }
+                        else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
+                        {
+                            DisplayImage(imagePath);
+                        }
+                        else
+                        {
+                            MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                 }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
             }
         }
 
@@ -204,10 +210,10 @@ namespace Convert_to_dcm
 
             return dicomFile;
         }
-        Bitmap? img = null;
+        Bitmap img;
         private void DisplayImage(string filePath)
         {
-            img = (Bitmap)Image.FromFile(filePath);
+            img = new Bitmap(Image.FromFile(filePath));
             pic1.Image = img;
             pic1.Visible = true;
         }
@@ -216,10 +222,11 @@ namespace Convert_to_dcm
         {
             using (var document = PdfDocument.Load(filePath))
             {
-                using (var image = document.Render(0, 3000, 3000, false))
+                using (var image = document.Render(0, 9000, 9000, false))
                 {
-                    img = (Bitmap?)image;
+                    img = new Bitmap(image);
                     pic1.Image = img;
+                    pic1.SizeMode = PictureBoxSizeMode.Zoom;
                     pic1.Visible = true;
                 }
             }

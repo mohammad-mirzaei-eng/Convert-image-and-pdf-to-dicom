@@ -18,8 +18,14 @@
   <ItemGroup>
     <PackageReference Include="fo-dicom" Version="5.2.1" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.1" />
-    <PackageReference Include="PDFium.forms.x86.v8-xfa" Version="4522.0.6" />
     <PackageReference Include="PdfiumViewer" Version="2.13.0" />
+    <PackageReference Include="PdfiumViewer.Native.x86_64.v8-xfa" Version="2018.4.8.256" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PdfiumViewer">
+      <HintPath>bin\Release\net8.0-windows7.0\PdfiumViewer.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
