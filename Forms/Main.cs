@@ -171,10 +171,10 @@ namespace Convert_to_dcm
         {
             dicomDataset.Add(DicomTag.PatientName, patientModel.PatientName);
             dicomDataset.Add(DicomTag.PatientID, patientModel.PatientID);
-            dicomDataset.Add(DicomTag.StudyInstanceUID, string.IsNullOrEmpty(additionalTags?.StudyInsUID.Trim()) ? additionalTags?.StudyInsUID : DicomUID.Generate().UID);
+            dicomDataset.Add(DicomTag.StudyInstanceUID, !string.IsNullOrEmpty(additionalTags?.StudyInsUID.Trim()) ? additionalTags?.StudyInsUID : DicomUID.Generate().UID);
             dicomDataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate().UID);
             dicomDataset.Add(DicomTag.SOPInstanceUID, DicomUID.Generate().UID);
-            dicomDataset.Add(DicomTag.SOPClassUID,string.IsNullOrEmpty( additionalTags?.SOPClassUID.Trim()) ? additionalTags?.SOPClassUID : DicomUID.SecondaryCaptureImageStorage.UID);
+            dicomDataset.Add(DicomTag.SOPClassUID,!string.IsNullOrEmpty( additionalTags?.SOPClassUID.Trim()) ? additionalTags?.SOPClassUID : DicomUID.SecondaryCaptureImageStorage.UID);
             dicomDataset.Add(DicomTag.PhotometricInterpretation, photometricInterpretation);
             dicomDataset.Add(DicomTag.TransferSyntaxUID, DicomUID.ExplicitVRLittleEndian);
             dicomDataset.Add(DicomTag.Rows, (ushort)height);
