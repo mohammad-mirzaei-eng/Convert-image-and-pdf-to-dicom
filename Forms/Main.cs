@@ -104,7 +104,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private async void ConvertToDicomAndSend(string filePath, PatientModel patientModel)
+        private async Task<bool> ConvertToDicomAndSendAsync(string filePath, PatientModel patientModel)
         {
             (string StudyInsUID, string SOPClassUID)? additionalTags = null;
 
@@ -130,6 +130,7 @@ namespace Convert_to_dcm
                             var client = DicomClientFactory.Create(settingsModel.ServerAddress, settingsModel.ServerPort, settingsModel.ServerUseTls, settingsModel.ServerTitle, settingsModel.ServerAET);
                             await client.AddRequestAsync(new DicomCStoreRequest(dicomFile));
                             await client.SendAsync();
+                            return true;
                         }
                         else
                         {
@@ -146,6 +147,7 @@ namespace Convert_to_dcm
             {
                 MessageBox.Show("فایل پیدا نشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            return false;
         }
 
         private (string StudyInsUID, string SOPClassUID) ExecuteSelectQuery(SettingsModel settings, string pid)
@@ -250,7 +252,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private void btn_Click(object sender, EventArgs e)
+        private async void btn_Click(object sender, EventArgs e)
         {
             if (imagePath != string.Empty && File.Exists(imagePath))
             {
@@ -260,10 +262,16 @@ namespace Convert_to_dcm
                     patientModel.PatientName = txtpatientfamily.Text.Trim();
                     patientModel.PatientID = txtpatientId.Text.Trim();
 
-                    ConvertToDicomAndSend(imagePath, patientModel);
-                    MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    // Clear the image 
-                    reset_image_setting();
+                    if(await ConvertToDicomAndSendAsync(imagePath, patientModel))
+                    {
+                        MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        // Clear the image 
+                        reset_image_setting();
+                    }
+                    else
+                    {
+                        MessageBox.Show("خطا در تبدیل یا ارسال فایل به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
                 else
                 {
