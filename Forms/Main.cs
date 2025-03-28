@@ -1,4 +1,5 @@
-﻿using Convert_to_dcm.Sql;
+﻿using Convert_to_dcm.Model;
+using Convert_to_dcm.Sql;
 using Convert_to_dcom.Class;
 using Convert_to_dcom.Class.Helper;
 using FellowOakDicom;
@@ -9,6 +10,8 @@ using FellowOakDicom.Network.Client;
 using FileCopyer.Classes.Design_Patterns.Helper;
 using PdfiumViewer;
 using System.Data;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using Image = System.Drawing.Image;
 using Rectangle = System.Drawing.Rectangle;
 
@@ -195,18 +198,32 @@ namespace Convert_to_dcm
             dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.ExplicitVRLittleEndian;
             // Add necessary DICOM tags
             AddDicomTags(dicomDataset, bitmap.Width, bitmap.Height, PhotometricInterpretation.Rgb.Value, 3, patientModel, additionalTags);
+            int bytesPerPixel = 3; // RGB 
+            byte[] pixelDataArray = new byte[bitmap.Width * bitmap.Height * bytesPerPixel];
+
+            // Lock the bitmap's bits
+            BitmapData bmpData = bitmap.LockBits(
+                new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                ImageLockMode.ReadOnly,
+                PixelFormat.Format24bppRgb);
+
+            // Copy the RGB values into the array
+            Marshal.Copy(bmpData.Scan0, pixelDataArray, 0, pixelDataArray.Length);
+            bitmap.UnlockBits(bmpData);
+
+            // Swap the Red and Blue values to convert from BGR to RGB
+            for (int i = 0; i < pixelDataArray.Length; i += 3)
+            {
+                byte temp = pixelDataArray[i];       // Blue
+                pixelDataArray[i] = pixelDataArray[i + 2];   // Red
+                pixelDataArray[i + 2] = temp;        // Blue to Red 
+            }
 
             // Convert the image to byte array
-            var pixelData = DicomPixelData.Create(dicomDataset, true);
-            pixelData.SamplesPerPixel = 3;
+            // Create DICOM pixel data and add the frame
+            DicomPixelData pixelData = DicomPixelData.Create(dicomDataset, true);
             pixelData.PlanarConfiguration = PlanarConfiguration.Interleaved;
-            pixelData.Height = (ushort)bitmap.Height;
-            pixelData.Width = (ushort)bitmap.Width;
-            var bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
-            byte[] pixelBytes = new byte[bitmapData.Stride * bitmapData.Height];
-            System.Runtime.InteropServices.Marshal.Copy(bitmapData.Scan0, pixelBytes, 0, pixelBytes.Length);
-            pixelData.AddFrame(new MemoryByteBuffer(pixelBytes));
-            bitmap.UnlockBits(bitmapData);
+            pixelData.AddFrame(new MemoryByteBuffer(pixelDataArray));
 
             return dicomFile;
         }
