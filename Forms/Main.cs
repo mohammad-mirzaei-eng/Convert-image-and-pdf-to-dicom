@@ -1,4 +1,5 @@
-﻿using Convert_to_dcm.Sql;
+﻿using Convert_to_dcm.Model;
+using Convert_to_dcm.Sql;
 using Convert_to_dcom.Class;
 using Convert_to_dcom.Class.Helper;
 using FellowOakDicom;
@@ -9,6 +10,8 @@ using FellowOakDicom.Network.Client;
 using FileCopyer.Classes.Design_Patterns.Helper;
 using PdfiumViewer;
 using System.Data;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using Image = System.Drawing.Image;
 using Rectangle = System.Drawing.Rectangle;
 
@@ -16,7 +19,6 @@ namespace Convert_to_dcm
 {
     public partial class Main : System.Windows.Forms.Form
     {
-        private PdfViewer pdfViewer; // Add a PdfViewer control
         private SettingsModel settingsModel = new SettingsModel(); // لیست مدل‌های فایل
         PatientModel patientModel; // مدل بیمار
         private string imagePath = string.Empty; // مسیر تصویر
@@ -26,7 +28,6 @@ namespace Convert_to_dcm
         public Main()
         {
             InitializeComponent();
-            pdfViewer = new PdfViewer(); // Initialize pdfViewer in the constructor
             patientModel = new PatientModel(); // Initialize patientModel in the constructor
         }
 
@@ -69,33 +70,41 @@ namespace Convert_to_dcm
 
         private void btnselect_Click(object sender, EventArgs e)
         {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            try
             {
-                openFileDialog.Filter = "PDF And Image|*.pdf;*.jpg;*.jpeg;*.png;*.bmp";
-                openFileDialog.Title = "Select a PDF or Image File";
-
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
-                    imagePath = openFileDialog.FileName;
-                    string extension = Path.GetExtension(imagePath).ToLower();
+                    openFileDialog.Filter = "PDF And Image|*.pdf;*.jpg;*.jpeg;*.png;*.bmp";
+                    openFileDialog.Title = "Select a PDF or Image File";
 
-                    if (extension == ".pdf")
+                    if (openFileDialog.ShowDialog() == DialogResult.OK)
                     {
-                        DisplayPdf(imagePath);
-                    }
-                    else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
-                    {
-                        DisplayImage(imagePath);
-                    }
-                    else
-                    {
-                        MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        imagePath = openFileDialog.FileName;
+                        string extension = Path.GetExtension(imagePath).ToLower();
+
+                        if (extension == ".pdf")
+                        {
+                            DisplayPdf(imagePath);
+                        }
+                        else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
+                        {
+                            DisplayImage(imagePath);
+                        }
+                        else
+                        {
+                            MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                 }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
             }
         }
 
-        private async void ConvertToDicomAndSend(string filePath, PatientModel patientModel)
+        private async Task<bool> ConvertToDicomAndSendAsync(string filePath, PatientModel patientModel)
         {
             (string StudyInsUID, string SOPClassUID)? additionalTags = null;
 
@@ -103,9 +112,8 @@ namespace Convert_to_dcm
                 !string.IsNullOrEmpty(settingsModel.Instance) &&
                 !string.IsNullOrEmpty(settingsModel.username) &&
                 !string.IsNullOrEmpty(settingsModel.password))
-            {
                 additionalTags = ExecuteSelectQuery(settingsModel, patientModel.PatientID);
-            }
+            
             if (img != null)
             {
                 var dicomFile = ConvertImageToDicom(img, patientModel, additionalTags);
@@ -121,6 +129,7 @@ namespace Convert_to_dcm
                             var client = DicomClientFactory.Create(settingsModel.ServerAddress, settingsModel.ServerPort, settingsModel.ServerUseTls, settingsModel.ServerTitle, settingsModel.ServerAET);
                             await client.AddRequestAsync(new DicomCStoreRequest(dicomFile));
                             await client.SendAsync();
+                            return true;
                         }
                         else
                         {
@@ -137,6 +146,7 @@ namespace Convert_to_dcm
             {
                 MessageBox.Show("فایل پیدا نشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            return false;
         }
 
         private (string StudyInsUID, string SOPClassUID) ExecuteSelectQuery(SettingsModel settings, string pid)
@@ -153,7 +163,7 @@ namespace Convert_to_dcm
             }
             else
             {
-                throw new Exception("No matching records found.");
+                return (string.Empty, string.Empty);
             }
         }
 
@@ -161,10 +171,10 @@ namespace Convert_to_dcm
         {
             dicomDataset.Add(DicomTag.PatientName, patientModel.PatientName);
             dicomDataset.Add(DicomTag.PatientID, patientModel.PatientID);
-            dicomDataset.Add(DicomTag.StudyInstanceUID, additionalTags?.StudyInsUID ?? DicomUID.Generate().UID);
+            dicomDataset.Add(DicomTag.StudyInstanceUID, !string.IsNullOrEmpty(additionalTags?.StudyInsUID.Trim()) ? additionalTags?.StudyInsUID : DicomUID.Generate().UID);
             dicomDataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate().UID);
             dicomDataset.Add(DicomTag.SOPInstanceUID, DicomUID.Generate().UID);
-            dicomDataset.Add(DicomTag.SOPClassUID, additionalTags?.SOPClassUID ?? DicomUID.SecondaryCaptureImageStorage.UID);
+            dicomDataset.Add(DicomTag.SOPClassUID,!string.IsNullOrEmpty( additionalTags?.SOPClassUID.Trim()) ? additionalTags?.SOPClassUID : DicomUID.SecondaryCaptureImageStorage.UID);
             dicomDataset.Add(DicomTag.PhotometricInterpretation, photometricInterpretation);
             dicomDataset.Add(DicomTag.TransferSyntaxUID, DicomUID.ExplicitVRLittleEndian);
             dicomDataset.Add(DicomTag.Rows, (ushort)height);
@@ -189,25 +199,40 @@ namespace Convert_to_dcm
             dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.ExplicitVRLittleEndian;
             // Add necessary DICOM tags
             AddDicomTags(dicomDataset, bitmap.Width, bitmap.Height, PhotometricInterpretation.Rgb.Value, 3, patientModel, additionalTags);
+            int bytesPerPixel = 3; // RGB 
+            byte[] pixelDataArray = new byte[bitmap.Width * bitmap.Height * bytesPerPixel];
+
+            // Lock the bitmap's bits
+            BitmapData bmpData = bitmap.LockBits(
+                new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                ImageLockMode.ReadOnly,
+                PixelFormat.Format24bppRgb);
+
+            // Copy the RGB values into the array
+            Marshal.Copy(bmpData.Scan0, pixelDataArray, 0, pixelDataArray.Length);
+            bitmap.UnlockBits(bmpData);
+
+            // Swap the Red and Blue values to convert from BGR to RGB
+            for (int i = 0; i < pixelDataArray.Length; i += 3)
+            {
+                byte temp = pixelDataArray[i];       // Blue
+                pixelDataArray[i] = pixelDataArray[i + 2];   // Red
+                pixelDataArray[i + 2] = temp;        // Blue to Red 
+            }
 
             // Convert the image to byte array
-            var pixelData = DicomPixelData.Create(dicomDataset, true);
-            pixelData.SamplesPerPixel = 3;
+            // Create DICOM pixel data and add the frame
+            DicomPixelData pixelData = DicomPixelData.Create(dicomDataset, true);
             pixelData.PlanarConfiguration = PlanarConfiguration.Interleaved;
-            pixelData.Height = (ushort)bitmap.Height;
-            pixelData.Width = (ushort)bitmap.Width;
-            var bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
-            byte[] pixelBytes = new byte[bitmapData.Stride * bitmapData.Height];
-            System.Runtime.InteropServices.Marshal.Copy(bitmapData.Scan0, pixelBytes, 0, pixelBytes.Length);
-            pixelData.AddFrame(new MemoryByteBuffer(pixelBytes));
-            bitmap.UnlockBits(bitmapData);
+            pixelData.AddFrame(new MemoryByteBuffer(pixelDataArray));
 
             return dicomFile;
         }
-        Bitmap? img = null;
+
+        Bitmap img;
         private void DisplayImage(string filePath)
         {
-            img = (Bitmap)Image.FromFile(filePath);
+            img = new Bitmap(Image.FromFile(filePath));
             pic1.Image = img;
             pic1.Visible = true;
         }
@@ -216,34 +241,57 @@ namespace Convert_to_dcm
         {
             using (var document = PdfDocument.Load(filePath))
             {
-                using (var image = document.Render(0, 3000, 3000, false))
+                using (var image = document.Render(0, 9000, 9000, false))
                 {
-                    img = (Bitmap?)image;
+                    img = new Bitmap(image);
                     pic1.Image = img;
+                    pic1.SizeMode = PictureBoxSizeMode.Zoom;
                     pic1.Visible = true;
                 }
             }
         }
 
-        private void btn_Click(object sender, EventArgs e)
+        private async void btn_Click(object sender, EventArgs e)
         {
-            if (imagePath != string.Empty && File.Exists(imagePath))
+            if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
             {
-                patientModel = new PatientModel();
-                patientModel.PatientName = txtpatientfamily.Text.Trim();
-                patientModel.PatientID = txtpatientId.Text.Trim();
+                if (!string.IsNullOrEmpty(txtpatientId.Text.Trim()))
+                {
+                    patientModel = new PatientModel()
+                    {
+                        PatientName = txtpatientfamily.Text.Trim(),
+                        PatientID = txtpatientId.Text.Trim()
+                    };
 
-                ConvertToDicomAndSend(imagePath, patientModel);
-                MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                // Clear the image and PDF viewer
-                pic1.Image = null;
-                pic1.Visible = false;
-                imagePath = string.Empty;
+                    if(await ConvertToDicomAndSendAsync(imagePath, patientModel))
+                    {
+                        MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        // Clear the image 
+                        reset_image_setting();
+                    }
+                    else
+                    {
+                        MessageBox.Show("خطا در تبدیل یا ارسال فایل به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("شماره مراجعه بیمار نمیتواند خالی باشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
             }
             else
             {
                 MessageBox.Show("شما اول باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void reset_image_setting()
+        {
+            pic1.Image = null;
+            pic1.Visible = false;
+            img = null;
+            imagePath = string.Empty;
         }
 
         private void SettingsToolStripMenuItem_Click(object sender, EventArgs e)
