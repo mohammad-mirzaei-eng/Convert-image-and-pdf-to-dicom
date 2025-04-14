@@ -32,28 +32,31 @@ namespace Convert_to_dcm
 
         private void pic1_MouseWheel(object? sender, MouseEventArgs e)
         {
-            if (pic1.Image == null)
+            if (sender is PictureBox)
             {
-                return; // Exit if there is no image to zoom
-            }
+                if ((sender as PictureBox).Image == null)
+                {
+                    return; // Exit if there is no image to zoom
+                }
 
-            if (e.Delta > 0)
-            {
-                zoomFactor += 0.1f; // Zoom in
-            }
-            else if (e.Delta < 0)
-            {
-                zoomFactor -= 0.1f; // Zoom out
-            }
+                if (e.Delta > 0)
+                {
+                    zoomFactor += 0.1f; // Zoom in
+                }
+                else if (e.Delta < 0)
+                {
+                    zoomFactor -= 0.1f; // Zoom out
+                }
 
-            if (zoomFactor < 0.1f)
-            {
-                zoomFactor = 0.1f; // Prevent zooming out too much
-            }
+                if (zoomFactor < 0.1f)
+                {
+                    zoomFactor = 0.1f; // Prevent zooming out too much
+                }
 
-            pic1.Width = (int)(pic1.Image.Width * zoomFactor);
-            pic1.Height = (int)(pic1.Image.Height * zoomFactor);
-            pic1.SizeMode = PictureBoxSizeMode.Zoom;
+                (sender as PictureBox).Width = (int)((sender as PictureBox).Image.Width * zoomFactor);
+                (sender as PictureBox).Height = (int)((sender as PictureBox).Image.Height * zoomFactor);
+                (sender as PictureBox).SizeMode = PictureBoxSizeMode.Zoom;
+            }
         }
 
         private void Main_Load(object sender, EventArgs e)
@@ -69,6 +72,7 @@ namespace Convert_to_dcm
 
         private void btnselect_Click(object sender, EventArgs e)
         {
+            reset_image_setting();
             try
             {
                 using (OpenFileDialog openFileDialog = new OpenFileDialog())
@@ -78,6 +82,15 @@ namespace Convert_to_dcm
                     openFileDialog.Multiselect = true;
                     if (openFileDialog.ShowDialog() == DialogResult.OK)
                     {
+                        FlowLayoutPanel flowLayoutPanel = new FlowLayoutPanel();
+                        flowLayoutPanel.BorderStyle = BorderStyle.FixedSingle;
+                        flowLayoutPanel.Location = new Point(0, 0);
+                        flowLayoutPanel.Size = new Size(574, 420);
+                        flowLayoutPanel.AutoScroll = true;
+                        flowLayoutPanel.FlowDirection = FlowDirection.LeftToRight;
+                        flowLayoutPanel.WrapContents = true;
+                        flowLayoutPanel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
                         foreach (var item in openFileDialog.FileNames)
                         {
                             imagePath = item;
@@ -85,18 +98,19 @@ namespace Convert_to_dcm
 
                             if (extension == ".pdf")
                             {
-                                DisplayPdf(imagePath);
+                                DisplayPdf(imagePath, flowLayoutPanel);
                             }
                             else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
                             {
-                                DisplayImage(imagePath);
-                                btn_Click(sender, e);
+                                DisplayImage(imagePath, flowLayoutPanel);
                             }
                             else
                             {
                                 MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
                         }
+                        flowLayoutPanel.Visible = true;
+                        panel1.Controls.Add(flowLayoutPanel);
                     }
                 }
 
@@ -109,14 +123,14 @@ namespace Convert_to_dcm
 
         private async Task<bool> ConvertToDicomAndSendAsync(string filePath, PatientModel patientModel)
         {
-            (string StudyInsUID, string SOPClassUID,string PName)? additionalTags = null;
+            (string StudyInsUID, string SOPClassUID, string PName)? additionalTags = null;
 
             if (!string.IsNullOrEmpty(settingsModel.ServerAddress) &&
                 !string.IsNullOrEmpty(settingsModel.Instance) &&
                 !string.IsNullOrEmpty(settingsModel.username) &&
                 !string.IsNullOrEmpty(settingsModel.password))
                 additionalTags = ExecuteSelectQuery(settingsModel, patientModel.PatientID);
-            
+
             if (img != null)
             {
                 var dicomFile = ConvertImageToDicom(img, patientModel, additionalTags);
@@ -152,10 +166,10 @@ namespace Convert_to_dcm
             return false;
         }
 
-        private (string StudyInsUID, string SOPClassUID,string name) ExecuteSelectQuery(SettingsModel settings, string pid)
+        private (string StudyInsUID, string SOPClassUID, string name) ExecuteSelectQuery(SettingsModel settings, string pid)
         {
             SQLCLASS sqlClass = new SQLCLASS(settings);
-            DataTable resultTable = sqlClass.ExecuteSelectQuery(pid,settings.ServerModality.ToString());
+            DataTable resultTable = sqlClass.ExecuteSelectQuery(pid, settings.ServerModality.ToString());
 
             if (resultTable.Rows.Count > 0)
             {
@@ -163,22 +177,22 @@ namespace Convert_to_dcm
                 string sopClassUID = row["SOPClassUID"]?.ToString() ?? string.Empty;
                 string studyInsUID = row["StudyInsUID"]?.ToString() ?? string.Empty;
                 string PName = row["PName"]?.ToString() ?? string.Empty;
-                return (studyInsUID, sopClassUID,PName);
+                return (studyInsUID, sopClassUID, PName);
             }
             else
             {
-                return (string.Empty, string.Empty,string.Empty);
+                return (string.Empty, string.Empty, string.Empty);
             }
         }
 
-        private void AddDicomTags(DicomDataset dicomDataset, int width, int height, string photometricInterpretation, ushort samplesPerPixel, PatientModel patientModel, (string StudyInsUID, string SOPClassUID,string PName)? additionalTags = null)
+        private void AddDicomTags(DicomDataset dicomDataset, int width, int height, string photometricInterpretation, ushort samplesPerPixel, PatientModel patientModel, (string StudyInsUID, string SOPClassUID, string PName)? additionalTags = null)
         {
-            dicomDataset.Add(DicomTag.PatientName,!string.IsNullOrEmpty(additionalTags?.PName.Trim())?additionalTags?.PName: patientModel.PatientName);
+            dicomDataset.Add(DicomTag.PatientName, !string.IsNullOrEmpty(additionalTags?.PName.Trim()) ? additionalTags?.PName : patientModel.PatientName);
             dicomDataset.Add(DicomTag.PatientID, patientModel.PatientID);
             dicomDataset.Add(DicomTag.StudyInstanceUID, !string.IsNullOrEmpty(additionalTags?.StudyInsUID.Trim()) ? additionalTags?.StudyInsUID : DicomUID.Generate().UID);
             dicomDataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate().UID);
             dicomDataset.Add(DicomTag.SOPInstanceUID, DicomUID.Generate().UID);
-            dicomDataset.Add(DicomTag.SOPClassUID,!string.IsNullOrEmpty( additionalTags?.SOPClassUID.Trim()) ? additionalTags?.SOPClassUID : DicomUID.SecondaryCaptureImageStorage.UID);
+            dicomDataset.Add(DicomTag.SOPClassUID, !string.IsNullOrEmpty(additionalTags?.SOPClassUID.Trim()) ? additionalTags?.SOPClassUID : DicomUID.SecondaryCaptureImageStorage.UID);
             dicomDataset.Add(DicomTag.PhotometricInterpretation, photometricInterpretation);
             dicomDataset.Add(DicomTag.TransferSyntaxUID, DicomUID.ExplicitVRLittleEndian);
             dicomDataset.Add(DicomTag.Rows, (ushort)height);
@@ -195,7 +209,7 @@ namespace Convert_to_dcm
             dicomDataset.Add(DicomTag.SeriesTime, currentTime);
         }
 
-        private DicomFile ConvertImageToDicom(Bitmap bitmap, PatientModel patientModel, (string StudyInsUID, string SOPClassUID,string PName)? additionalTags)
+        private DicomFile ConvertImageToDicom(Bitmap bitmap, PatientModel patientModel, (string StudyInsUID, string SOPClassUID, string PName)? additionalTags)
         {
             // Create a DICOM file
             var dicomFile = new DicomFile();
@@ -233,24 +247,45 @@ namespace Convert_to_dcm
             return dicomFile;
         }
 
-        Bitmap img;
-        private void DisplayImage(string filePath)
+        Bitmap? img;
+        private void DisplayImage(string filePath, FlowLayoutPanel panel)
         {
-            img = new Bitmap(Image.FromFile(filePath));
-            pic1.Image = img;
-            pic1.Visible = true;
+            try
+            {
+                img = new Bitmap(Image.FromFile(filePath));
+                PictureBox pictureBox = new PictureBox()
+                {
+                    BorderStyle = BorderStyle.FixedSingle,
+                    Size = new Size(574, 454),
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    Visible = true,
+                    Image = img
+                };
+                pictureBox.MouseWheel += pic1_MouseWheel;
+                panel.Controls.Add(pictureBox);                
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error displaying image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
-        private void DisplayPdf(string filePath)
+        private void DisplayPdf(string filePath, FlowLayoutPanel panel)
         {
             using (var document = PdfDocument.Load(filePath))
             {
                 using (var image = document.Render(0, 9000, 9000, false))
                 {
-                    img = new Bitmap(image);
-                    pic1.Image = img;
-                    pic1.SizeMode = PictureBoxSizeMode.Zoom;
-                    pic1.Visible = true;
+                    PictureBox pictureBox = new PictureBox()
+                    {
+                        BorderStyle = BorderStyle.FixedSingle,
+                        Size = new Size(574, 454),
+                        SizeMode = PictureBoxSizeMode.Zoom,
+                        Visible = true,
+                        Image = image
+                    };
+                    pictureBox.MouseWheel += pic1_MouseWheel;
+                    panel.Controls.Add(pictureBox);
                 }
             }
         }
@@ -267,7 +302,7 @@ namespace Convert_to_dcm
                         PatientID = txtpatientId.Text.Trim()
                     };
 
-                    if(await ConvertToDicomAndSendAsync(imagePath, patientModel))
+                    if (await ConvertToDicomAndSendAsync(imagePath, patientModel))
                     {
                         MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         // Clear the image 
@@ -292,8 +327,7 @@ namespace Convert_to_dcm
 
         private void reset_image_setting()
         {
-            pic1.Image = null;
-            pic1.Visible = false;
+            panel1.Controls.Clear();
             img = null;
             imagePath = string.Empty;
         }
