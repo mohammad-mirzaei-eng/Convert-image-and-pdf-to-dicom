@@ -41,7 +41,7 @@ namespace Convert_to_dcm
         {
             try
             {
-                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_log"+DateTime.UtcNow.ToString()+".txt");
+                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_Main_log"+DateTime.UtcNow.ToString()+".txt");
                 using (StreamWriter writer = new StreamWriter(logFilePath, true))
                 {
                     writer.WriteLine($"[{DateTime.Now}] {message}");
