@@ -1,5 +1,4 @@
-﻿using Convert_to_dcm.Model;
-using Convert_to_dcm.Sql;
+﻿using Convert_to_dcm.Sql;
 using Convert_to_dcom.Class;
 using Convert_to_dcom.Class.Helper;
 using FellowOakDicom;
@@ -76,23 +75,27 @@ namespace Convert_to_dcm
                 {
                     openFileDialog.Filter = "PDF And Image|*.pdf;*.jpg;*.jpeg;*.png;*.bmp";
                     openFileDialog.Title = "Select a PDF or Image File";
-
+                    openFileDialog.Multiselect = true;
                     if (openFileDialog.ShowDialog() == DialogResult.OK)
                     {
-                        imagePath = openFileDialog.FileName;
-                        string extension = Path.GetExtension(imagePath).ToLower();
+                        foreach (var item in openFileDialog.FileNames)
+                        {
+                            imagePath = item;
+                            string extension = Path.GetExtension(imagePath).ToLower();
 
-                        if (extension == ".pdf")
-                        {
-                            DisplayPdf(imagePath);
-                        }
-                        else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
-                        {
-                            DisplayImage(imagePath);
-                        }
-                        else
-                        {
-                            MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            if (extension == ".pdf")
+                            {
+                                DisplayPdf(imagePath);
+                            }
+                            else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
+                            {
+                                DisplayImage(imagePath);
+                                btn_Click(sender, e);
+                            }
+                            else
+                            {
+                                MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
                     }
                 }
@@ -106,7 +109,7 @@ namespace Convert_to_dcm
 
         private async Task<bool> ConvertToDicomAndSendAsync(string filePath, PatientModel patientModel)
         {
-            (string StudyInsUID, string SOPClassUID)? additionalTags = null;
+            (string StudyInsUID, string SOPClassUID,string PName)? additionalTags = null;
 
             if (!string.IsNullOrEmpty(settingsModel.ServerAddress) &&
                 !string.IsNullOrEmpty(settingsModel.Instance) &&
@@ -149,27 +152,28 @@ namespace Convert_to_dcm
             return false;
         }
 
-        private (string StudyInsUID, string SOPClassUID) ExecuteSelectQuery(SettingsModel settings, string pid)
+        private (string StudyInsUID, string SOPClassUID,string name) ExecuteSelectQuery(SettingsModel settings, string pid)
         {
             SQLCLASS sqlClass = new SQLCLASS(settings);
-            DataTable resultTable = sqlClass.ExecuteSelectQuery(pid);
+            DataTable resultTable = sqlClass.ExecuteSelectQuery(pid,settings.ServerModality.ToString());
 
             if (resultTable.Rows.Count > 0)
             {
                 DataRow row = resultTable.Rows[0];
                 string sopClassUID = row["SOPClassUID"]?.ToString() ?? string.Empty;
                 string studyInsUID = row["StudyInsUID"]?.ToString() ?? string.Empty;
-                return (studyInsUID, sopClassUID);
+                string PName = row["PName"]?.ToString() ?? string.Empty;
+                return (studyInsUID, sopClassUID,PName);
             }
             else
             {
-                return (string.Empty, string.Empty);
+                return (string.Empty, string.Empty,string.Empty);
             }
         }
 
-        private void AddDicomTags(DicomDataset dicomDataset, int width, int height, string photometricInterpretation, ushort samplesPerPixel, PatientModel patientModel, (string StudyInsUID, string SOPClassUID)? additionalTags = null)
+        private void AddDicomTags(DicomDataset dicomDataset, int width, int height, string photometricInterpretation, ushort samplesPerPixel, PatientModel patientModel, (string StudyInsUID, string SOPClassUID,string PName)? additionalTags = null)
         {
-            dicomDataset.Add(DicomTag.PatientName, patientModel.PatientName);
+            dicomDataset.Add(DicomTag.PatientName,!string.IsNullOrEmpty(additionalTags?.PName.Trim())?additionalTags?.PName: patientModel.PatientName);
             dicomDataset.Add(DicomTag.PatientID, patientModel.PatientID);
             dicomDataset.Add(DicomTag.StudyInstanceUID, !string.IsNullOrEmpty(additionalTags?.StudyInsUID.Trim()) ? additionalTags?.StudyInsUID : DicomUID.Generate().UID);
             dicomDataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate().UID);
@@ -191,7 +195,7 @@ namespace Convert_to_dcm
             dicomDataset.Add(DicomTag.SeriesTime, currentTime);
         }
 
-        private DicomFile ConvertImageToDicom(Bitmap bitmap, PatientModel patientModel, (string StudyInsUID, string SOPClassUID)? additionalTags)
+        private DicomFile ConvertImageToDicom(Bitmap bitmap, PatientModel patientModel, (string StudyInsUID, string SOPClassUID,string PName)? additionalTags)
         {
             // Create a DICOM file
             var dicomFile = new DicomFile();
