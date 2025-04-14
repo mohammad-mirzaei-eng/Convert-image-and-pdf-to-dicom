@@ -37,6 +37,24 @@ namespace Convert_to_dcm
             }
         }
 
+        private void LogError(string message, Exception ex)
+        {
+            try
+            {
+                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_log"+DateTime.UtcNow.ToString()+".txt");
+                using (StreamWriter writer = new StreamWriter(logFilePath, true))
+                {
+                    writer.WriteLine($"[{DateTime.Now}] {message}");
+                    writer.WriteLine(ex.ToString());
+                    writer.WriteLine();
+                }
+            }
+            catch (Exception logEx)
+            {
+                MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void pic1_MouseWheel(object? sender, MouseEventArgs e)
         {
             try
@@ -54,6 +72,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling mouse wheel event ", ex);
                 MessageBox.Show($"Error handling mouse wheel event: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -67,6 +86,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Adjust Zoom Factor ", ex);
                 MessageBox.Show($"Error adjusting zoom factor: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -88,6 +108,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Update PictureBox Size ", ex);
                 MessageBox.Show($"Error updating picture box size: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -100,6 +121,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Main Load ", ex);
                 MessageBox.Show($"Error loading main form: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -112,6 +134,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Load File Models ", ex);
                 MessageBox.Show($"Error loading file models: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -136,6 +159,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling btn select ", ex);
                 MessageBox.Show($"Error selecting files: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -169,6 +193,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Display Selected Files ", ex);
                 MessageBox.Show($"Error displaying selected files: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -190,6 +215,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Create FlowLayout Panel ", ex);
                 MessageBox.Show($"Error creating flow layout panel: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
@@ -227,6 +253,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Convert To Dicom And Send Async ", ex);
                 MessageBox.Show($"Error converting to DICOM and sending: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -243,6 +270,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Is Server Settings Valid ", ex);
                 MessageBox.Show($"Error validating server settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -274,6 +302,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Send Dicom File To Server Async ", ex);
                 MessageBox.Show($"Error sending DICOM file to server: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -301,6 +330,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Execute Select Query ", ex);
                 MessageBox.Show($"Error executing select query: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return (string.Empty, string.Empty, string.Empty);
             }
@@ -333,6 +363,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Add Dicom Tags ", ex);
                 MessageBox.Show($"Error adding DICOM tags: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -371,6 +402,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Convert Image To Dicom ", ex);
                 MessageBox.Show($"Error converting image to DICOM: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
@@ -386,6 +418,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Display Image ", ex);
                 MessageBox.Show($"Error displaying image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -407,6 +440,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Create PictureBox ", ex);
                 MessageBox.Show($"Error creating picture box: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
@@ -425,6 +459,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Display Pdf ", ex);
                 MessageBox.Show($"Error displaying PDF: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -465,6 +500,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling btn Click ", ex);
                 MessageBox.Show($"Error handling button click: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -479,6 +515,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Reset Image Setting ", ex);
                 MessageBox.Show($"Error resetting image settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -495,6 +532,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling Settings ToolStripMenuItem ", ex);
                 MessageBox.Show($"Error opening settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -507,6 +545,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling exit ToolStripMenuItem ", ex);
                 MessageBox.Show($"Error exiting application: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -522,6 +561,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
+                LogError("Error handling about ToolStripMenuItem ", ex);
                 MessageBox.Show($"Error opening about dialog: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
