@@ -7,6 +7,7 @@ using FellowOakDicom.IO.Buffer;
 using FellowOakDicom.Network;
 using FellowOakDicom.Network.Client;
 using FileCopyer.Classes.Design_Patterns.Helper;
+using Microsoft.IdentityModel.Tokens;
 using PdfiumViewer;
 using System.Data;
 using System.Drawing.Imaging;
@@ -20,7 +21,7 @@ namespace Convert_to_dcm
     {
         private SettingsModel SettingsModel { get; set; } = new SettingsModel();
         private PatientModel PatientModel { get; set; }
-        private string ImagePath { get; set; } = string.Empty;
+        private List<string> ImagePath =new List<string>();
         private float ZoomFactor { get; set; } = 1.0f;
         private Bitmap? Img { get; set; }
 
@@ -170,18 +171,19 @@ namespace Convert_to_dcm
             {
                 FlowLayoutPanel flowLayoutPanel = CreateFlowLayoutPanel();
 
+                ImagePath.AddRange(fileNames);
                 foreach (var item in fileNames)
                 {
-                    ImagePath = item;
-                    string extension = Path.GetExtension(ImagePath).ToLower();
+                    //ImagePath.Add(item);
+                    string extension = Path.GetExtension(item).ToLower();
 
                     if (extension == ".pdf")
                     {
-                        DisplayPdf(ImagePath, flowLayoutPanel);
+                        DisplayPdf(item, flowLayoutPanel);
                     }
                     else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
                     {
-                        DisplayImage(ImagePath, flowLayoutPanel);
+                        DisplayImage(item, flowLayoutPanel);
                     }
                     else
                     {
@@ -468,35 +470,38 @@ namespace Convert_to_dcm
         {
             try
             {
-                if (!string.IsNullOrEmpty(ImagePath) && File.Exists(ImagePath))
+                foreach (var item in ImagePath)
                 {
-                    if (!string.IsNullOrEmpty(txtpatientId.Text.Trim()))
+                    if (!string.IsNullOrEmpty(item) && File.Exists(item))
                     {
-                        PatientModel = new PatientModel
+                        if (!string.IsNullOrEmpty(txtpatientId.Text.Trim()))
                         {
-                            PatientName = txtpatientfamily.Text.Trim(),
-                            PatientID = txtpatientId.Text.Trim()
-                        };
+                            PatientModel = new PatientModel
+                            {
+                                PatientName = txtpatientfamily.Text.Trim(),
+                                PatientID = txtpatientId.Text.Trim()
+                            };
 
-                        if (await ConvertToDicomAndSendAsync(ImagePath, PatientModel))
-                        {
-                            MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            ResetImageSetting();
+                            if (await ConvertToDicomAndSendAsync(item, PatientModel))
+                            {
+                                MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            else
+                            {
+                                MessageBox.Show("خطا در تبدیل یا ارسال فایل به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
                         else
                         {
-                            MessageBox.Show("خطا در تبدیل یا ارسال فایل به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show("شماره مراجعه بیمار نمیتواند خالی باشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }
                     else
                     {
-                        MessageBox.Show("شماره مراجعه بیمار نمیتواند خالی باشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("شما اول باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
-                else
-                {
-                    MessageBox.Show("شما اول باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                ResetImageSetting();
             }
             catch (Exception ex)
             {
@@ -511,7 +516,10 @@ namespace Convert_to_dcm
             {
                 panel1.Controls.Clear();
                 Img = null;
-                ImagePath = string.Empty;
+                if (ImagePath!=null && ImagePath.Count>0)
+                {
+                    ImagePath.Clear();
+                }
             }
             catch (Exception ex)
             {
