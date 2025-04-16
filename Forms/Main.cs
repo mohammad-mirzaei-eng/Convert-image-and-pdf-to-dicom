@@ -21,7 +21,7 @@ namespace Convert_to_dcm
     {
         private SettingsModel SettingsModel { get; set; } = new SettingsModel();
         private PatientModel PatientModel { get; set; }
-        private List<string> ImagePath =new List<string>();
+        private List<string> ImagePath = new List<string>();
         private float ZoomFactor { get; set; } = 1.0f;
         private Bitmap? Img { get; set; }
 
@@ -42,7 +42,7 @@ namespace Convert_to_dcm
         {
             try
             {
-                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_Main_log"+DateTime.UtcNow.ToString()+".txt");
+                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_Main_log" + DateTime.UtcNow.ToString() + ".txt");
                 using (StreamWriter writer = new StreamWriter(logFilePath, true))
                 {
                     writer.WriteLine($"[{DateTime.Now}] {message}");
@@ -241,7 +241,7 @@ namespace Convert_to_dcm
 
                     if (dicomFile != null)
                     {
-                        dicomFile.Save(fileInfo.Name+".dcm");
+                        dicomFile.Save(fileInfo.Name + ".dcm");
                         if (await SendDicomFileToServerAsync(dicomFile))
                         {
                             return true;
@@ -471,18 +471,17 @@ namespace Convert_to_dcm
         {
             try
             {
-                foreach (var item in ImagePath)
+                if (!string.IsNullOrEmpty(txtpatientId.Text.Trim()))
                 {
-                    if (!string.IsNullOrEmpty(item) && File.Exists(item))
+                    PatientModel = new PatientModel
                     {
-                        if (!string.IsNullOrEmpty(txtpatientId.Text.Trim()))
+                        PatientName = txtpatientfamily.Text.Trim(),
+                        PatientID = txtpatientId.Text.Trim()
+                    };
+                    foreach (var item in ImagePath)
+                    {
+                        if (!string.IsNullOrEmpty(item) && File.Exists(item))
                         {
-                            PatientModel = new PatientModel
-                            {
-                                PatientName = txtpatientfamily.Text.Trim(),
-                                PatientID = txtpatientId.Text.Trim()
-                            };
-
                             if (await ConvertToDicomAndSendAsync(item, PatientModel))
                             {
                                 MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -494,15 +493,16 @@ namespace Convert_to_dcm
                         }
                         else
                         {
-                            MessageBox.Show("شماره مراجعه بیمار نمیتواند خالی باشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show("شما باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }
-                    else
-                    {
-                        MessageBox.Show("شما اول باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    ResetImageSetting();
                 }
-                ResetImageSetting();
+                else
+                {
+                    MessageBox.Show("شماره مراجعه بیمار نمیتواند خالی باشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
             }
             catch (Exception ex)
             {
@@ -517,8 +517,16 @@ namespace Convert_to_dcm
             {
                 panel1.Controls.Clear();
                 Img = null;
-                if (ImagePath!=null && ImagePath.Count>0)
+                if (ImagePath != null && ImagePath.Count > 0)
                 {
+                    foreach (var item in ImagePath)
+                    {
+                        FileInfo itemFile = new FileInfo(item);
+                        if (File.Exists(itemFile.Name + ".dcm"))
+                        {
+                            File.Delete(itemFile.Name + ".dcm");
+                        }
+                    }
                     ImagePath.Clear();
                 }
             }
