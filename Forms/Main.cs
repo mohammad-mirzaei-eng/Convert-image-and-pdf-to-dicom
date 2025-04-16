@@ -54,6 +54,23 @@ namespace Convert_to_dcm
             {
                 MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }  
+        
+        private void LogError(string message)
+        {
+            try
+            {
+                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_Main_log" + DateTime.UtcNow.ToString() + ".txt");
+                using (StreamWriter writer = new StreamWriter(logFilePath, true))
+                {
+                    writer.WriteLine($"[{DateTime.Now}] {message}");
+                    writer.WriteLine();
+                }
+            }
+            catch (Exception logEx)
+            {
+                MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void pic1_MouseWheel(object? sender, MouseEventArgs e)
@@ -169,11 +186,16 @@ namespace Convert_to_dcm
         {
             try
             {
-                FlowLayoutPanel flowLayoutPanel = CreateFlowLayoutPanel();
-                ImagePath.AddRange(fileNames);
-                foreach (var item in fileNames)
+                FlowLayoutPanel? flowLayoutPanel = CreateFlowLayoutPanel();
+                if (flowLayoutPanel == null)
                 {
-                    //ImagePath.Add(item);
+                    LogError("Error handling Display Selected Files : flowLayoutPanel is null ");
+                    return;
+                }
+
+                ImagePath.AddRange(fileNames);
+                Parallel.ForEach(fileNames, item =>
+                {
                     string extension = Path.GetExtension(item).ToLower();
                     if (extension == ".pdf")
                     {
@@ -187,7 +209,8 @@ namespace Convert_to_dcm
                     {
                         MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
-                }
+                });
+
                 flowLayoutPanel.Visible = true;
                 panel1.Controls.Add(flowLayoutPanel);
             }
@@ -198,7 +221,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private FlowLayoutPanel CreateFlowLayoutPanel()
+        private FlowLayoutPanel? CreateFlowLayoutPanel()
         {
             try
             {
@@ -239,10 +262,7 @@ namespace Convert_to_dcm
                     if (dicomFile != null)
                     {
                         dicomFile.Save(Path.GetFileNameWithoutExtension(filePath) + ".dcm");
-                        if (await SendDicomFileToServerAsync(dicomFile))
-                        {
-                            return true;
-                        }
+                        return await SendDicomFileToServerAsync(dicomFile);
                     }
                 }
                 else
@@ -368,7 +388,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private DicomFile ConvertImageToDicom(Bitmap bitmap, PatientModel patientModel, (string StudyInsUID, string SOPClassUID, string PName)? additionalTags)
+        private DicomFile? ConvertImageToDicom(Bitmap bitmap, PatientModel patientModel, (string StudyInsUID, string SOPClassUID, string PName)? additionalTags)
         {
             try
             {
@@ -412,8 +432,11 @@ namespace Convert_to_dcm
         {
             try
             {
-                Img = new Bitmap(Image.FromFile(filePath));
-                PictureBox pictureBox = CreatePictureBox(Img);
+                if (Img == null)
+                {
+                    Img = new Bitmap(Image.FromFile(filePath));
+                }
+                PictureBox? pictureBox = CreatePictureBox(Img);
                 panel.Controls.Add(pictureBox);
             }
             catch (Exception ex)
@@ -423,7 +446,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private PictureBox CreatePictureBox(Image image)
+        private PictureBox? CreatePictureBox(Image image)
         {
             try
             {
@@ -453,7 +476,7 @@ namespace Convert_to_dcm
                 using (var document = PdfDocument.Load(filePath))
                 {
                     var image = document.Render(0, 9000, 9000, false);
-                    PictureBox pictureBox = CreatePictureBox(image);
+                    PictureBox? pictureBox = CreatePictureBox(image);
                     panel.Controls.Add(pictureBox);
                 }
             }
@@ -514,13 +537,15 @@ namespace Convert_to_dcm
             {
                 panel1.Controls.Clear();
                 Img = null;
+
                 if (ImagePath != null && ImagePath.Count > 0)
                 {
                     foreach (var item in ImagePath)
                     {
-                        if (File.Exists(Path.GetFileNameWithoutExtension(item) + ".dcm"))
+                        string dicomFilePath = Path.GetFileNameWithoutExtension(item) + ".dcm";
+                        if (File.Exists(dicomFilePath))
                         {
-                            File.Delete(Path.GetFileNameWithoutExtension(item) + ".dcm");
+                            File.Delete(dicomFilePath);
                         }
                     }
                     ImagePath.Clear();
