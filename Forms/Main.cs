@@ -227,7 +227,6 @@ namespace Convert_to_dcm
         {
             try
             {
-                FileInfo fileInfo = new FileInfo(filePath);
                 (string StudyInsUID, string SOPClassUID, string PName)? additionalTags = null;
 
                 if (IsServerSettingsValid())
@@ -241,7 +240,7 @@ namespace Convert_to_dcm
 
                     if (dicomFile != null)
                     {
-                        dicomFile.Save(fileInfo.Name + ".dcm");
+                        dicomFile.Save(Path.GetFileNameWithoutExtension(filePath)+ ".dcm");
                         if (await SendDicomFileToServerAsync(dicomFile))
                         {
                             return true;
@@ -521,10 +520,9 @@ namespace Convert_to_dcm
                 {
                     foreach (var item in ImagePath)
                     {
-                        FileInfo itemFile = new FileInfo(item);
-                        if (File.Exists(itemFile.Name + ".dcm"))
+                        if (File.Exists(Path.GetFileNameWithoutExtension(item) + ".dcm"))
                         {
-                            File.Delete(itemFile.Name + ".dcm");
+                            File.Delete(Path.GetFileNameWithoutExtension(item) + ".dcm");
                         }
                     }
                     ImagePath.Clear();
