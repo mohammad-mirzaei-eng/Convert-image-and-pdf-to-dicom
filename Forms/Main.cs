@@ -238,7 +238,7 @@ namespace Convert_to_dcm
 
                     if (dicomFile != null)
                     {
-                        dicomFile.Save(Path.GetFileNameWithoutExtension(filePath)+ ".dcm");
+                        dicomFile.Save(Path.GetFileNameWithoutExtension(filePath) + ".dcm");
                         if (await SendDicomFileToServerAsync(dicomFile))
                         {
                             return true;
@@ -579,3 +579,4 @@ namespace Convert_to_dcm
             }
         }
     }
+}
