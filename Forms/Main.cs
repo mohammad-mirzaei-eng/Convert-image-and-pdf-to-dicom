@@ -170,13 +170,11 @@ namespace Convert_to_dcm
             try
             {
                 FlowLayoutPanel flowLayoutPanel = CreateFlowLayoutPanel();
-
                 ImagePath.AddRange(fileNames);
                 foreach (var item in fileNames)
                 {
                     //ImagePath.Add(item);
                     string extension = Path.GetExtension(item).ToLower();
-
                     if (extension == ".pdf")
                     {
                         DisplayPdf(item, flowLayoutPanel);
@@ -483,7 +481,7 @@ namespace Convert_to_dcm
                         {
                             if (await ConvertToDicomAndSendAsync(item, PatientModel))
                             {
-                                MessageBox.Show("فایل تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                MessageBox.Show($"فایل {Path.GetFileNameWithoutExtension(item)} تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             }
                             else
                             {
@@ -581,4 +579,3 @@ namespace Convert_to_dcm
             }
         }
     }
-}
