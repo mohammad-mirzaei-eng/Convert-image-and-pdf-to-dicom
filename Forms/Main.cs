@@ -227,6 +227,7 @@ namespace Convert_to_dcm
         {
             try
             {
+                FileInfo fileInfo = new FileInfo(filePath);
                 (string StudyInsUID, string SOPClassUID, string PName)? additionalTags = null;
 
                 if (IsServerSettingsValid())
@@ -240,7 +241,7 @@ namespace Convert_to_dcm
 
                     if (dicomFile != null)
                     {
-                        dicomFile.Save("output.dcm");
+                        dicomFile.Save(fileInfo.Name+".dcm");
                         if (await SendDicomFileToServerAsync(dicomFile))
                         {
                             return true;
