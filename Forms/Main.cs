@@ -42,7 +42,12 @@ namespace Convert_to_dcm
         {
             try
             {
-                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_Main_log" + DateTime.UtcNow.ToString() + ".txt");
+                string errorDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Errors");
+                if (!Directory.Exists(errorDirectory))
+                {
+                    Directory.CreateDirectory(errorDirectory);
+                }
+                string logFilePath = Path.Combine(errorDirectory, "error_Main_log" + DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss") + ".txt");
                 using (StreamWriter writer = new StreamWriter(logFilePath, true))
                 {
                     writer.WriteLine($"[{DateTime.Now}] {message}");
@@ -54,13 +59,19 @@ namespace Convert_to_dcm
             {
                 MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }  
-        
+        }
+
         private void LogError(string message)
         {
             try
             {
-                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_Main_log" + DateTime.UtcNow.ToString() + ".txt");
+                string errorDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Errors");
+                if (!Directory.Exists(errorDirectory))
+                {
+                    Directory.CreateDirectory(errorDirectory);
+                }
+                string logFilePath = Path.Combine(errorDirectory, "error_Main_log" + DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss") + ".txt");
+
                 using (StreamWriter writer = new StreamWriter(logFilePath, true))
                 {
                     writer.WriteLine($"[{DateTime.Now}] {message}");
@@ -69,6 +80,8 @@ namespace Convert_to_dcm
             }
             catch (Exception logEx)
             {
+                Clipboard.Clear();
+                Clipboard.SetText(logEx.Message);
                 MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -255,14 +268,21 @@ namespace Convert_to_dcm
                     additionalTags = ExecuteSelectQuery(SettingsModel, patientModel.PatientID);
                 }
 
-                if (Img != null)
+                if (filePath != null && File.Exists(filePath))
                 {
-                    var dicomFile = ConvertImageToDicom(Img, patientModel, additionalTags);
-
-                    if (dicomFile != null)
+                    using (Bitmap bitmapimg = new Bitmap(filePath))
                     {
-                        dicomFile.Save(Path.GetFileNameWithoutExtension(filePath) + ".dcm");
-                        return await SendDicomFileToServerAsync(dicomFile);
+                        var dicomFile = ConvertImageToDicom(bitmapimg, patientModel, additionalTags);
+
+                        if (dicomFile != null)
+                        {
+                            await dicomFile.SaveAsync(Path.GetFileNameWithoutExtension(filePath) + ".dcm");
+                            return await SendDicomFileToServerAsync(dicomFile);
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
                 }
                 else
