@@ -38,7 +38,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private void LogError(string message, Exception ex)
+        private async void LogError(string message, Exception ex)
         {
             try
             {
@@ -50,9 +50,9 @@ namespace Convert_to_dcm
                 string logFilePath = Path.Combine(errorDirectory, "error_Main_log" + DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss") + ".txt");
                 using (StreamWriter writer = new StreamWriter(logFilePath, true))
                 {
-                    writer.WriteLine($"[{DateTime.Now}] {message}");
-                    writer.WriteLine(ex.ToString());
-                    writer.WriteLine();
+                    await writer.WriteLineAsync($"[{DateTime.Now}] {message}");
+                    await writer.WriteLineAsync(ex.ToString());
+                    await writer.WriteLineAsync();
                 }
             }
             catch (Exception logEx)
@@ -61,7 +61,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private void LogError(string message)
+        private async void LogError(string message)
         {
             try
             {
@@ -74,8 +74,8 @@ namespace Convert_to_dcm
 
                 using (StreamWriter writer = new StreamWriter(logFilePath, true))
                 {
-                    writer.WriteLine($"[{DateTime.Now}] {message}");
-                    writer.WriteLine();
+                   await writer.WriteLineAsync($"[{DateTime.Now}] {message}");
+                   await writer.WriteLineAsync();
                 }
             }
             catch (Exception logEx)
@@ -206,8 +206,10 @@ namespace Convert_to_dcm
                     return;
                 }
 
-                ImagePath.AddRange(fileNames);
-                Parallel.ForEach(fileNames, item =>
+                ImagePath.AddRange(fileNames); 
+                ParallelOptions parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+                Parallel.ForEach(fileNames,parallelOptions, item =>
                 {
                     string extension = Path.GetExtension(item).ToLower();
                     if (extension == ".pdf")
