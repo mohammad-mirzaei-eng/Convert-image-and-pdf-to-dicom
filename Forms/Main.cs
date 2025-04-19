@@ -74,8 +74,8 @@ namespace Convert_to_dcm
 
                 using (StreamWriter writer = new StreamWriter(logFilePath, true))
                 {
-                   await writer.WriteLineAsync($"[{DateTime.Now}] {message}");
-                   await writer.WriteLineAsync();
+                    await writer.WriteLineAsync($"[{DateTime.Now}] {message}");
+                    await writer.WriteLineAsync();
                 }
             }
             catch (Exception logEx)
@@ -206,10 +206,10 @@ namespace Convert_to_dcm
                     return;
                 }
 
-                ImagePath.AddRange(fileNames); 
+                ImagePath.AddRange(fileNames);
                 ParallelOptions parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-                Parallel.ForEach(fileNames,parallelOptions, item =>
+                Parallel.ForEach(fileNames, parallelOptions, item =>
                 {
                     string extension = Path.GetExtension(item).ToLower();
                     if (extension == ".pdf")
@@ -513,69 +513,51 @@ namespace Convert_to_dcm
         {
             try
             {
-                // بررسی اینکه شماره بیمار خالی نباشد
                 if (string.IsNullOrEmpty(txtpatientId.Text.Trim()))
                 {
                     MessageBox.Show("شماره مراجعه بیمار نمیتواند خالی باشد", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // مقداردهی مدل بیمار
-                PatientModel = new PatientModel
-                {
-                    PatientName = txtpatientfamily.Text.Trim(),
-                    PatientID = txtpatientId.Text.Trim()
-                };
-
-                // بررسی اینکه فایل‌ها انتخاب شده باشند
                 if (ImagePath == null || ImagePath.Count == 0)
                 {
                     MessageBox.Show("شما باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // غیرفعال کردن دکمه برای جلوگیری از کلیک‌های مکرر
                 btn.Enabled = false;
 
-                // پردازش فایل‌ها به صورت موازی
-                var tasks = ImagePath
-                    .Where(item => !string.IsNullOrEmpty(item) && File.Exists(item)) // فیلتر فایل‌های معتبر
-                    .Select(async item =>
+                PatientModel = new PatientModel
+                {
+                    PatientName = txtpatientfamily.Text.Trim(),
+                    PatientID = txtpatientId.Text.Trim()
+                };
+
+                foreach (var item in ImagePath)
+                {
+                    if (!string.IsNullOrEmpty(item) && File.Exists(item))
                     {
-                        try
+                        if (await ConvertToDicomAndSendAsync(item, PatientModel))
                         {
-                            // تبدیل و ارسال فایل به DICOM
-                            bool success = await ConvertToDicomAndSendAsync(item, PatientModel);
-                            if (success)
-                            {
-                                MessageBox.Show($"فایل {Path.GetFileNameWithoutExtension(item)} تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                            else
-                            {
-                                MessageBox.Show($"خطا در تبدیل یا ارسال فایل {Path.GetFileNameWithoutExtension(item)} به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
+                            MessageBox.Show($"فایل {Path.GetFileNameWithoutExtension(item)} تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            LogError($"Error processing file {item}", ex);
+                            MessageBox.Show("خطا در تبدیل یا ارسال فایل به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
-                    });
-
-                // منتظر ماندن برای اتمام تمام وظایف
-                await Task.WhenAll(tasks);
-
-                // بازنشانی تنظیمات پس از اتمام پردازش
+                    }
+                    else
+                    {
+                        MessageBox.Show("شما باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
                 ResetImageSetting();
+
             }
             catch (Exception ex)
             {
-                LogError("Error handling btn Click", ex);
+                LogError("Error handling btn Click ", ex);
                 MessageBox.Show($"Error handling button click: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                // فعال کردن دوباره دکمه
-                btn.Enabled = true;
             }
         }
 
