@@ -22,6 +22,8 @@ namespace Convert_to_dcm
         private SettingsModel SettingsModel { get; set; } = new SettingsModel();
         private PatientModel PatientModel { get; set; }
         private List<string> ImagePath = new List<string>();
+        private (string StudyInsUID, string SOPClassUID, string PName)? cachedTags = null;
+        private string? cachedPatientID = null;
         private float ZoomFactor { get; set; } = 1.0f;
         private Bitmap? Img { get; set; }
 
@@ -267,7 +269,7 @@ namespace Convert_to_dcm
 
                 if (IsServerSettingsValid())
                 {
-                    additionalTags = ExecuteSelectQuery(SettingsModel, patientModel.PatientID);
+                    additionalTags = GetCachedOrExecuteSelectQuery(SettingsModel, patientModel.PatientID);
                 }
 
                 if (filePath != null && File.Exists(filePath))
@@ -559,6 +561,10 @@ namespace Convert_to_dcm
                 LogError("Error handling btn Click ", ex);
                 MessageBox.Show($"Error handling button click: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                btn.Enabled = true;
+            }
         }
 
         private void ResetImageSetting()
@@ -632,6 +638,21 @@ namespace Convert_to_dcm
                 LogError("Error handling about ToolStripMenuItem ", ex);
                 MessageBox.Show($"Error opening about dialog: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        } 
+
+        private (string StudyInsUID, string SOPClassUID, string PName) GetCachedOrExecuteSelectQuery(SettingsModel settings, string patientID)
+        {
+            // اگر PatientID تغییر نکرده باشد، مقدار کش شده را بازگردان
+            if (cachedPatientID == patientID && cachedTags.HasValue)
+            {
+                return cachedTags.Value;
+            }
+
+            // اگر PatientID تغییر کرده باشد، مقدار جدید را از دیتابیس بگیر و کش کن
+            cachedTags = ExecuteSelectQuery(settings, patientID);
+            cachedPatientID = patientID;
+
+            return cachedTags.Value;
         }
     }
 }
