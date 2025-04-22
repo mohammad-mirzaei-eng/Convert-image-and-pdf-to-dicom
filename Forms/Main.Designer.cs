@@ -44,6 +44,7 @@
             toolStripMenuItem2 = new ToolStripSeparator();
             exitToolStripMenuItem = new ToolStripMenuItem();
             panel1 = new Panel();
+            btnreset = new Button();
             contextMenuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -59,7 +60,7 @@
             // 
             // btn
             // 
-            btn.Location = new Point(216, 530);
+            btn.Location = new Point(257, 530);
             btn.Name = "btn";
             btn.Size = new Size(75, 23);
             btn.TabIndex = 2;
@@ -154,11 +155,22 @@
             panel1.Size = new Size(574, 454);
             panel1.TabIndex = 7;
             // 
+            // btnreset
+            // 
+            btnreset.Location = new Point(94, 530);
+            btnreset.Name = "btnreset";
+            btnreset.Size = new Size(75, 23);
+            btnreset.TabIndex = 8;
+            btnreset.Text = "Reset";
+            btnreset.UseVisualStyleBackColor = true;
+            btnreset.Click += btnreset_Click;
+            // 
             // Main
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(575, 565);
+            Controls.Add(btnreset);
             Controls.Add(panel1);
             Controls.Add(label2);
             Controls.Add(label1);
@@ -192,5 +204,6 @@
         private ToolStripMenuItem aboutToolStripMenuItem;
         private ToolStripSeparator toolStripMenuItem2;
         private Panel panel1;
+        private Button btnreset;
     }
 }

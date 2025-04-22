@@ -7,7 +7,6 @@ using FellowOakDicom.IO.Buffer;
 using FellowOakDicom.Network;
 using FellowOakDicom.Network.Client;
 using FileCopyer.Classes.Design_Patterns.Helper;
-using Microsoft.IdentityModel.Tokens;
 using PdfiumViewer;
 using System.Data;
 using System.Drawing.Imaging;
@@ -534,25 +533,51 @@ namespace Convert_to_dcm
                     PatientName = txtpatientfamily.Text.Trim(),
                     PatientID = txtpatientId.Text.Trim()
                 };
+                // پردازش فایل‌ها به صورت موازی
+                var tasks = ImagePath
+                    .Where(item => !string.IsNullOrEmpty(item) && File.Exists(item)) // فیلتر فایل‌های معتبر
+                    .Select(async item =>
+                    {
+                        try
+                        {
+                            // تبدیل و ارسال فایل به DICOM
+                            bool success = await ConvertToDicomAndSendAsync(item, PatientModel);
+                            if (success)
+                            {
+                                MessageBox.Show($"فایل {Path.GetFileNameWithoutExtension(item)} تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            else
+                            {
+                                MessageBox.Show($"خطا در تبدیل یا ارسال فایل {Path.GetFileNameWithoutExtension(item)} به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError($"Error processing file {item}", ex);
+                        }
+                    });
 
-                foreach (var item in ImagePath)
-                {
-                    if (!string.IsNullOrEmpty(item) && File.Exists(item))
-                    {
-                        if (await ConvertToDicomAndSendAsync(item, PatientModel))
-                        {
-                            MessageBox.Show($"فایل {Path.GetFileNameWithoutExtension(item)} تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            MessageBox.Show("خطا در تبدیل یا ارسال فایل به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show("شما باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
+                // منتظر ماندن برای اتمام تمام وظایف
+                await Task.WhenAll(tasks);
+
+                //foreach (var item in ImagePath)
+                //{
+                //    if (!string.IsNullOrEmpty(item) && File.Exists(item))
+                //    {
+                //        if (await ConvertToDicomAndSendAsync(item, PatientModel))
+                //        {
+                //            MessageBox.Show($"فایل {Path.GetFileNameWithoutExtension(item)} تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //        }
+                //        else
+                //        {
+                //            MessageBox.Show("خطا در تبدیل یا ارسال فایل به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //        }
+                //    }
+                //    else
+                //    {
+                //        MessageBox.Show("شما باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //    }
+                //}
                 ResetImageSetting();
 
             }
@@ -572,7 +597,10 @@ namespace Convert_to_dcm
             try
             {
                 panel1.Controls.Clear();
+                
+                cachedPatientID = null;
                 Img = null;
+                cachedTags = null;
 
                 if (ImagePath != null && ImagePath.Count > 0)
                 {
@@ -638,7 +666,7 @@ namespace Convert_to_dcm
                 LogError("Error handling about ToolStripMenuItem ", ex);
                 MessageBox.Show($"Error opening about dialog: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        } 
+        }
 
         private (string StudyInsUID, string SOPClassUID, string PName) GetCachedOrExecuteSelectQuery(SettingsModel settings, string patientID)
         {
@@ -653,6 +681,12 @@ namespace Convert_to_dcm
             cachedPatientID = patientID;
 
             return cachedTags.Value;
+        }
+
+        private void btnreset_Click(object sender, EventArgs e)
+        {
+            btn.Enabled = true;
+            ResetImageSetting();
         }
     }
 }
