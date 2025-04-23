@@ -280,7 +280,7 @@ namespace Convert_to_dcm
                         if (dicomFile != null)
                         {
                             await dicomFile.SaveAsync(Path.GetFileNameWithoutExtension(filePath) + ".dcm");
-                            return await SendDicomFileToServerAsync(dicomFile);
+                            return true;// await SendDicomFileToServerAsync(dicomFile);
                         }
                         else
                         {
@@ -418,25 +418,13 @@ namespace Convert_to_dcm
                 var dicomFile = new DicomFile();
                 var dicomDataset = dicomFile.Dataset;
                 dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.ExplicitVRLittleEndian;
+
                 AddDicomTags(dicomDataset, bitmap.Width, bitmap.Height, PhotometricInterpretation.Rgb.Value, 3, patientModel, additionalTags);
-                //int bytesPerPixel = 3;
-                // byte[] pixelDataArray = new byte[bitmap.Width * bitmap.Height * bytesPerPixel];
+
+                // فراخوانی GetBitmapPixels برای استخراج داده‌های دقیق پیکسل‌ها
                 byte[] pixelDataArray = GetBitmapPixels(bitmap);
-                BitmapData bmpData = bitmap.LockBits(
-                    new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                    ImageLockMode.ReadOnly,
-                    PixelFormat.Format24bppRgb);
 
-                Marshal.Copy(bmpData.Scan0, pixelDataArray, 0, pixelDataArray.Length);
-                bitmap.UnlockBits(bmpData);
-
-                for (int i = 0; i < pixelDataArray.Length; i += 3)
-                {
-                    byte temp = pixelDataArray[i];
-                    pixelDataArray[i] = pixelDataArray[i + 2];
-                    pixelDataArray[i + 2] = temp;
-                }
-
+                // اضافه کردن داده‌های پیکسل به فایل DICOM
                 DicomPixelData pixelData = DicomPixelData.Create(dicomDataset, true);
                 pixelData.PlanarConfiguration = PlanarConfiguration.Interleaved;
                 pixelData.AddFrame(new MemoryByteBuffer(pixelDataArray));
@@ -445,11 +433,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Convert Image To Dicom ", ex);
+                LogError("Error converting image to DICOM", ex);
                 MessageBox.Show($"Error converting image to DICOM: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
         }
+
 
         private void DisplayImage(string filePath, FlowLayoutPanel panel)
         {
@@ -609,7 +598,7 @@ namespace Convert_to_dcm
                         string dicomFilePath = Path.GetFileNameWithoutExtension(item) + ".dcm";
                         if (File.Exists(dicomFilePath))
                         {
-                            File.Delete(dicomFilePath);
+                            //File.Delete(dicomFilePath);
                         }
                     }
                     ImagePath.Clear();
@@ -662,7 +651,7 @@ namespace Convert_to_dcm
             int stride = bmpData.Stride;
             int width = bitmap.Width;
             int height = bitmap.Height;
-            int bytesPerPixel = 3;
+            int bytesPerPixel = 3; // برای تصاویر RGB
 
             byte[] rawData = new byte[stride * height];
             Marshal.Copy(bmpData.Scan0, rawData, 0, rawData.Length);
@@ -677,7 +666,7 @@ namespace Convert_to_dcm
                     int bmpIndex = y * stride + x * bytesPerPixel;
                     int dcmIndex = (y * width + x) * bytesPerPixel;
 
-                    // BGR to RGB
+                    // RGB به BGR تبدیل رنگ‌ها
                     result[dcmIndex] = rawData[bmpIndex + 2];     // R
                     result[dcmIndex + 1] = rawData[bmpIndex + 1]; // G
                     result[dcmIndex + 2] = rawData[bmpIndex];     // B
@@ -686,6 +675,7 @@ namespace Convert_to_dcm
 
             return result;
         }
+
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
