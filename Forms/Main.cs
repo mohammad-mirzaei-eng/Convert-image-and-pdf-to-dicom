@@ -419,9 +419,9 @@ namespace Convert_to_dcm
                 var dicomDataset = dicomFile.Dataset;
                 dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.ExplicitVRLittleEndian;
                 AddDicomTags(dicomDataset, bitmap.Width, bitmap.Height, PhotometricInterpretation.Rgb.Value, 3, patientModel, additionalTags);
-                int bytesPerPixel = 3;
-                byte[] pixelDataArray = new byte[bitmap.Width * bitmap.Height * bytesPerPixel];
-
+                //int bytesPerPixel = 3;
+                // byte[] pixelDataArray = new byte[bitmap.Width * bitmap.Height * bytesPerPixel];
+                byte[] pixelDataArray = GetBitmapPixels(bitmap);
                 BitmapData bmpData = bitmap.LockBits(
                     new Rectangle(0, 0, bitmap.Width, bitmap.Height),
                     ImageLockMode.ReadOnly,
@@ -652,6 +652,41 @@ namespace Convert_to_dcm
             }
         }
 
+        private byte[] GetBitmapPixels(Bitmap bitmap)
+        {
+            BitmapData bmpData = bitmap.LockBits(
+                new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                ImageLockMode.ReadOnly,
+                PixelFormat.Format24bppRgb);
+
+            int stride = bmpData.Stride;
+            int width = bitmap.Width;
+            int height = bitmap.Height;
+            int bytesPerPixel = 3;
+
+            byte[] rawData = new byte[stride * height];
+            Marshal.Copy(bmpData.Scan0, rawData, 0, rawData.Length);
+            bitmap.UnlockBits(bmpData);
+
+            byte[] result = new byte[width * height * bytesPerPixel];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int bmpIndex = y * stride + x * bytesPerPixel;
+                    int dcmIndex = (y * width + x) * bytesPerPixel;
+
+                    // BGR to RGB
+                    result[dcmIndex] = rawData[bmpIndex + 2];     // R
+                    result[dcmIndex + 1] = rawData[bmpIndex + 1]; // G
+                    result[dcmIndex + 2] = rawData[bmpIndex];     // B
+                }
+            }
+
+            return result;
+        }
+
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try
@@ -686,6 +721,8 @@ namespace Convert_to_dcm
         private void btnreset_Click(object sender, EventArgs e)
         {
             btn.Enabled = true;
+            txtpatientfamily.Text = string.Empty;
+            txtpatientId.Text = string.Empty;
             ResetImageSetting();
         }
     }
