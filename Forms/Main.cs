@@ -280,7 +280,7 @@ namespace Convert_to_dcm
                         if (dicomFile != null)
                         {
                             await dicomFile.SaveAsync(Path.GetFileNameWithoutExtension(filePath) + ".dcm");
-                            return true;// await SendDicomFileToServerAsync(dicomFile);
+                            return await SendDicomFileToServerAsync(dicomFile);
                         }
                         else
                         {
@@ -598,7 +598,7 @@ namespace Convert_to_dcm
                         string dicomFilePath = Path.GetFileNameWithoutExtension(item) + ".dcm";
                         if (File.Exists(dicomFilePath))
                         {
-                            //File.Delete(dicomFilePath);
+                            File.Delete(dicomFilePath);
                         }
                     }
                     ImagePath.Clear();
