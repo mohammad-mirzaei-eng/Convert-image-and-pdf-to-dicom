@@ -44,15 +44,13 @@
             toolStripMenuItem2 = new ToolStripSeparator();
             exitToolStripMenuItem = new ToolStripMenuItem();
             panel1 = new Panel();
-            pic1 = new PictureBox();
+            btnreset = new Button();
             contextMenuStrip1.SuspendLayout();
-            panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)pic1).BeginInit();
             SuspendLayout();
             // 
             // btnselect
             // 
-            btnselect.Location = new Point(452, 472);
+            btnselect.Location = new Point(475, 471);
             btnselect.Name = "btnselect";
             btnselect.Size = new Size(75, 23);
             btnselect.TabIndex = 1;
@@ -62,7 +60,7 @@
             // 
             // btn
             // 
-            btn.Location = new Point(216, 530);
+            btn.Location = new Point(257, 530);
             btn.Name = "btn";
             btn.Size = new Size(75, 23);
             btn.TabIndex = 2;
@@ -90,7 +88,7 @@
             label1.Location = new Point(338, 475);
             label1.Name = "label1";
             label1.RightToLeft = RightToLeft.Yes;
-            label1.Size = new Size(77, 15);
+            label1.Size = new Size(80, 15);
             label1.TabIndex = 5;
             label1.Text = "شماره مراجعه :";
             // 
@@ -100,7 +98,7 @@
             label2.Location = new Point(338, 504);
             label2.Name = "label2";
             label2.RightToLeft = RightToLeft.Yes;
-            label2.Size = new Size(94, 15);
+            label2.Size = new Size(98, 15);
             label2.TabIndex = 6;
             label2.Text = "نام و نام خانوادگی:";
             // 
@@ -152,28 +150,27 @@
             // 
             panel1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             panel1.AutoScroll = true;
-            panel1.Controls.Add(pic1);
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
             panel1.Size = new Size(574, 454);
             panel1.TabIndex = 7;
             // 
-            // pic1
+            // btnreset
             // 
-            pic1.BorderStyle = BorderStyle.FixedSingle;
-            pic1.Location = new Point(0, 0);
-            pic1.Name = "pic1";
-            pic1.Size = new Size(574, 454);
-            pic1.SizeMode = PictureBoxSizeMode.StretchImage;
-            pic1.TabIndex = 1;
-            pic1.TabStop = false;
-            pic1.MouseWheel += pic1_MouseWheel;
+            btnreset.Location = new Point(94, 530);
+            btnreset.Name = "btnreset";
+            btnreset.Size = new Size(75, 23);
+            btnreset.TabIndex = 8;
+            btnreset.Text = "Reset";
+            btnreset.UseVisualStyleBackColor = true;
+            btnreset.Click += btnreset_Click;
             // 
             // Main
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(575, 565);
+            Controls.Add(btnreset);
             Controls.Add(panel1);
             Controls.Add(label2);
             Controls.Add(label1);
@@ -188,8 +185,6 @@
             Text = "Convert To Dicom";
             Load += Main_Load;
             contextMenuStrip1.ResumeLayout(false);
-            panel1.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)pic1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -209,6 +204,6 @@
         private ToolStripMenuItem aboutToolStripMenuItem;
         private ToolStripSeparator toolStripMenuItem2;
         private Panel panel1;
-        private PictureBox pic1;
+        private Button btnreset;
     }
 }

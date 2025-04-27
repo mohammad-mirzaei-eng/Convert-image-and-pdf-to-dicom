@@ -9,6 +9,9 @@
     <ApplicationIcon>it.ico</ApplicationIcon>
     <Description>برنامه تبدیل عکس و وکتور به دایکام و ارسال به پکس</Description>
     <Product />
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
   </PropertyGroup>
 
   <ItemGroup>

@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Setting));
             ipservertxt = new IPTextBox();
             label1 = new Label();
             btnSaveSetings = new Button();
@@ -279,6 +280,7 @@
             // 
             txtPassword.Location = new Point(3, 61);
             txtPassword.Name = "txtPassword";
+            txtPassword.PasswordChar = '*';
             txtPassword.Size = new Size(116, 23);
             txtPassword.TabIndex = 2;
             // 
@@ -286,6 +288,7 @@
             // 
             txtUsername.Location = new Point(3, 32);
             txtUsername.Name = "txtUsername";
+            txtUsername.PasswordChar = '*';
             txtUsername.Size = new Size(116, 23);
             txtUsername.TabIndex = 1;
             // 
@@ -307,6 +310,7 @@
             Controls.Add(label1);
             Controls.Add(ipservertxt);
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Margin = new Padding(4, 3, 4, 3);
             MaximizeBox = false;
             MinimizeBox = false;
