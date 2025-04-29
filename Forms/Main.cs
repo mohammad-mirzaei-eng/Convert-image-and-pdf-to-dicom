@@ -481,15 +481,31 @@ namespace Convert_to_dcm
             }
         }
 
-        private void DisplayPdf(string filePath, FlowLayoutPanel panel)
+        private void DisplayPdf(string filePath, FlowLayoutPanel panel,int dpi=1200)
         {
             try
             {
                 using (var document = PdfDocument.Load(filePath))
                 {
-                    var image = document.Render(0, 9000, 9000, false);
-                    PictureBox? pictureBox = CreatePictureBox(image);
-                    panel.Controls.Add(pictureBox);
+                    if (document == null)
+                    {
+                        MessageBox.Show("خطا در بارگذاری PDF", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    int pages = document.PageCount;
+
+                    for (int i = 0; i < pages; i++)
+                    {
+                        using (var image = document.Render(i, dpi, dpi, true)) // استفاده از DPI بالا
+                        {
+                            PictureBox? pictureBox = CreatePictureBox(image);
+                            if (pictureBox != null)
+                            {
+                                panel.Controls.Add(pictureBox);
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -586,7 +602,7 @@ namespace Convert_to_dcm
             try
             {
                 panel1.Controls.Clear();
-                
+
                 cachedPatientID = null;
                 Img = null;
                 cachedTags = null;
@@ -646,7 +662,7 @@ namespace Convert_to_dcm
             BitmapData bmpData = bitmap.LockBits(
                 new Rectangle(0, 0, bitmap.Width, bitmap.Height),
                 ImageLockMode.ReadOnly,
-                PixelFormat.Format24bppRgb);
+                PixelFormat.Format32bppRgb);
 
             int stride = bmpData.Stride;
             int width = bitmap.Width;
