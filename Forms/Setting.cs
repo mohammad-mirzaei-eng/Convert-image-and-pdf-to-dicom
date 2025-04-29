@@ -79,7 +79,7 @@ namespace Convert_to_dcm
                     return;
                 }
 
-                SerializationHelper.SaveSettings(settingsModel);
+                await SerializationHelper.SaveSettings(settingsModel);
                 MessageBox.Show("Settings saved successfully", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 LoadSettings();
             }
