@@ -45,7 +45,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                ErrHelper.Instance.LogError("Error handling Main constructor ", ex);
+                ErrHelper.Instance.LogError("Error handling Main constructor ", ex).Wait();
                 MessageBox.Show($"Error initializing Main form: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -218,7 +218,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                ErrHelper.Instance.LogError("Error handling Create FlowLayout Panel ", ex);
+                ErrHelper.Instance.LogError("Error handling Create FlowLayout Panel ", ex).Wait();
                 MessageBox.Show($"Error creating flow layout panel: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
@@ -277,7 +277,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                ErrHelper.Instance.LogError("Error handling Is Server Settings Valid ", ex);
+                ErrHelper.Instance.LogError("Error handling Is Server Settings Valid ", ex).Wait();
                 MessageBox.Show($"Error validating server settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -337,7 +337,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                ErrHelper.Instance.LogError("Error handling Execute Select Query ", ex);
+                ErrHelper.Instance.LogError("Error handling Execute Select Query ", ex).Wait();
                 MessageBox.Show($"Error executing select query: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return (string.Empty, string.Empty, string.Empty);
             }
@@ -397,7 +397,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                ErrHelper.Instance.LogError("Error converting image to DICOM", ex);
+                ErrHelper.Instance.LogError("Error converting image to DICOM", ex).Wait();
                 MessageBox.Show($"Error converting image to DICOM: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
@@ -439,7 +439,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                ErrHelper.Instance.LogError("Error handling Create PictureBox ", ex);
+                ErrHelper.Instance.LogError("Error handling Create PictureBox ", ex).Wait();
                 MessageBox.Show($"Error creating picture box: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }

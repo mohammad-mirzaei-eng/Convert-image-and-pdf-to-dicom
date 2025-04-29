@@ -26,7 +26,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                ErrHelper.Instance.LogError("Error handling occurred during initialization ", ex);
+                ErrHelper.Instance.LogError("Error handling occurred during initialization ", ex).Wait();
                 MessageBox.Show($"An error occurred during initialization: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
