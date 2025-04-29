@@ -14,6 +14,10 @@ namespace Convert_to_dcom.Class
             username = string.Empty;
             password = string.Empty;
             Catalog = string.Empty;
+            DPI=1200;
+            ServerPort = 0;
+            ServerUseTls = false;
+            ServerModality = Modality.CT;
         }
 
         public string ServerAddress { get; set; }
@@ -25,6 +29,7 @@ namespace Convert_to_dcom.Class
         public string username { get; set; }
         public string password { get; set; }
         public string Catalog { get; set; }
-        public Modality ServerModality { get; set; } // Add this property
+        public Modality ServerModality { get; set; } 
+        public int DPI { get; set; }
     }
 }

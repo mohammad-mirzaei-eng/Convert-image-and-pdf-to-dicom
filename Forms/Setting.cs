@@ -103,11 +103,11 @@ namespace Convert_to_dcm
             }
         }
 
-        private void LoadSettings()
+        private async void LoadSettings()
         {
             try
             {
-                settingsModel = SerializationHelper.LoadSettings();
+                settingsModel =await SerializationHelper.LoadSettings();
                 ipservertxt.Text = settingsModel.ServerAddress;
                 portserver.Text = settingsModel.ServerPort.ToString();
                 titletxt.Text = settingsModel.ServerTitle;

@@ -158,11 +158,11 @@ namespace Convert_to_dcm
             }
         }
 
-        private void LoadFileModels()
+        private async void LoadFileModels()
         {
             try
             {
-                SettingsModel = SerializationHelper.LoadSettings();
+                SettingsModel = await SerializationHelper.LoadSettings();
             }
             catch (Exception ex)
             {
