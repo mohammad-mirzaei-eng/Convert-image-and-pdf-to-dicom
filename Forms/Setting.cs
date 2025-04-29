@@ -1,4 +1,5 @@
-﻿using Convert_to_dcom.Class;
+﻿using Convert_to_dcm.Helper;
+using Convert_to_dcom.Class;
 using Convert_to_dcom.Class.Helper;
 using FileCopyer.Classes.Design_Patterns.Helper;
 using System;
@@ -25,12 +26,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling occurred during initialization ", ex);
+                ErrHelper.Instance.LogError("Error handling occurred during initialization ", ex);
                 MessageBox.Show($"An error occurred during initialization: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void FillModalityComboBox()
+        private async void FillModalityComboBox()
         {
             try
             {
@@ -38,7 +39,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Fill Modality ComboBox ", ex);
+                await ErrHelper.Instance.LogError("Error handling Fill Modality ComboBox ", ex);
                 MessageBox.Show($"An error occurred while filling the modality combo box: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -51,6 +52,7 @@ namespace Convert_to_dcm
             {
                 if (!int.TryParse(portserver.Text.Trim(), out int serverPort))
                 {
+                    await ErrHelper.Instance.LogError("Invalid server port", new Exception("Invalid server port"));
                     MessageBox.Show("Invalid server port", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
@@ -85,12 +87,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling btn Save Setings ", ex);
+                await ErrHelper.Instance.LogError("Error handling btn Save Setings ", ex);
                 MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void Setting_Load(object sender, EventArgs e)
+        private async void Setting_Load(object sender, EventArgs e)
         {
             try
             {
@@ -98,7 +100,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Setting Load ", ex);
+                await ErrHelper.Instance.LogError("Error handling Setting Load ", ex);
                 MessageBox.Show($"An error occurred while loading settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -122,27 +124,8 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Load Settings ", ex);
+                await ErrHelper.Instance.LogError("Error handling Load Settings ", ex);
                 MessageBox.Show($"An error occurred while loading settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-
-        private void LogError(string message, Exception ex)
-        {
-            try
-            {
-                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error_Setting_log" + DateTime.UtcNow.ToString() + ".txt");
-                using (StreamWriter writer = new StreamWriter(logFilePath, true))
-                {
-                    writer.WriteLine($"[{DateTime.Now}] {message}");
-                    writer.WriteLine(ex.ToString());
-                    writer.WriteLine();
-                }
-            }
-            catch (Exception logEx)
-            {
-                MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
