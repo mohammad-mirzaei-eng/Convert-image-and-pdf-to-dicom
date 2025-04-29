@@ -1,4 +1,5 @@
-﻿using Convert_to_dcm.Sql;
+﻿using Convert_to_dcm.Helper;
+using Convert_to_dcm.Sql;
 using Convert_to_dcom.Class;
 using Convert_to_dcom.Class.Helper;
 using FellowOakDicom;
@@ -25,69 +26,32 @@ namespace Convert_to_dcm
         private string? cachedPatientID = null;
         private float ZoomFactor { get; set; } = 1.0f;
         private Bitmap? Img { get; set; }
+        private readonly ErrHelper _errHelper = ErrHelper.Instance;
 
         public Main()
         {
             try
             {
                 InitializeComponent();
-                PatientModel = new PatientModel();
+                PatientModel = new PatientModel
+                {
+                    PatientID = string.Empty,
+                    PatientName = string.Empty,
+                    PatientBirthDate = string.Empty,
+                    PatientSex = string.Empty,
+                    PatientAge = string.Empty,
+                    PatientDoc = string.Empty
+                };
             }
             catch (Exception ex)
             {
+                ErrHelper.Instance.LogError("Error handling Main constructor ", ex);
                 MessageBox.Show($"Error initializing Main form: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private async void LogError(string message, Exception ex)
-        {
-            try
-            {
-                string errorDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Errors");
-                if (!Directory.Exists(errorDirectory))
-                {
-                    Directory.CreateDirectory(errorDirectory);
-                }
-                string logFilePath = Path.Combine(errorDirectory, "error_Main_log" + DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss") + ".txt");
-                using (StreamWriter writer = new StreamWriter(logFilePath, true))
-                {
-                    await writer.WriteLineAsync($"[{DateTime.Now}] {message}");
-                    await writer.WriteLineAsync(ex.ToString());
-                    await writer.WriteLineAsync();
-                }
-            }
-            catch (Exception logEx)
-            {
-                MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
 
-        private async void LogError(string message)
-        {
-            try
-            {
-                string errorDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Errors");
-                if (!Directory.Exists(errorDirectory))
-                {
-                    Directory.CreateDirectory(errorDirectory);
-                }
-                string logFilePath = Path.Combine(errorDirectory, "error_Main_log" + DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss") + ".txt");
-
-                using (StreamWriter writer = new StreamWriter(logFilePath, true))
-                {
-                    await writer.WriteLineAsync($"[{DateTime.Now}] {message}");
-                    await writer.WriteLineAsync();
-                }
-            }
-            catch (Exception logEx)
-            {
-                Clipboard.Clear();
-                Clipboard.SetText(logEx.Message);
-                MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void pic1_MouseWheel(object? sender, MouseEventArgs e)
+        private async void pic1_MouseWheel(object? sender, MouseEventArgs e)
         {
             try
             {
@@ -104,12 +68,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling mouse wheel event ", ex);
+                await ErrHelper.Instance.LogError("Error handling mouse wheel event ", ex);
                 MessageBox.Show($"Error handling mouse wheel event: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void AdjustZoomFactor(int delta)
+        private async void AdjustZoomFactor(int delta)
         {
             try
             {
@@ -118,12 +82,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Adjust Zoom Factor ", ex);
+                await ErrHelper.Instance.LogError("Error handling Adjust Zoom Factor ", ex);
                 MessageBox.Show($"Error adjusting zoom factor: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void UpdatePictureBoxSize(PictureBox pictureBox)
+        private async void UpdatePictureBoxSize(PictureBox pictureBox)
         {
             try
             {
@@ -140,12 +104,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Update PictureBox Size ", ex);
+                await ErrHelper.Instance.LogError("Error handling Update PictureBox Size ", ex);
                 MessageBox.Show($"Error updating picture box size: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void Main_Load(object sender, EventArgs e)
+        private async void Main_Load(object sender, EventArgs e)
         {
             try
             {
@@ -153,7 +117,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Main Load ", ex);
+                await ErrHelper.Instance.LogError("Error handling Main Load ", ex);
                 MessageBox.Show($"Error loading main form: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -166,12 +130,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Load File Models ", ex);
+                await ErrHelper.Instance.LogError("Error handling Load File Models ", ex);
                 MessageBox.Show($"Error loading file models: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void btnselect_Click(object sender, EventArgs e)
+        private async void btnselect_Click(object sender, EventArgs e)
         {
             try
             {
@@ -191,19 +155,19 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling btn select ", ex);
+                await ErrHelper.Instance.LogError("Error handling btn select ", ex);
                 MessageBox.Show($"Error selecting files: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void DisplaySelectedFiles(string[] fileNames)
+        private async void DisplaySelectedFiles(string[] fileNames)
         {
             try
             {
                 FlowLayoutPanel? flowLayoutPanel = CreateFlowLayoutPanel();
                 if (flowLayoutPanel == null)
                 {
-                    LogError("Error handling Display Selected Files : flowLayoutPanel is null ");
+                    await ErrHelper.Instance.LogError("Error handling Display Selected Files : flowLayoutPanel is null ");
                     return;
                 }
 
@@ -232,7 +196,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Display Selected Files ", ex);
+                await ErrHelper.Instance.LogError("Error handling Display Selected Files ", ex);
                 MessageBox.Show($"Error displaying selected files: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -254,7 +218,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Create FlowLayout Panel ", ex);
+                ErrHelper.Instance.LogError("Error handling Create FlowLayout Panel ", ex);
                 MessageBox.Show($"Error creating flow layout panel: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
@@ -296,13 +260,13 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Convert To Dicom And Send Async ", ex);
+                await ErrHelper.Instance.LogError("Error handling Convert To Dicom And Send Async ", ex);
                 MessageBox.Show($"Error converting to DICOM and sending: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
         }
 
-        private bool IsServerSettingsValid()
+        private  bool IsServerSettingsValid()
         {
             try
             {
@@ -313,7 +277,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Is Server Settings Valid ", ex);
+                ErrHelper.Instance.LogError("Error handling Is Server Settings Valid ", ex);
                 MessageBox.Show($"Error validating server settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -345,7 +309,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Send Dicom File To Server Async ", ex);
+                await ErrHelper.Instance.LogError("Error handling Send Dicom File To Server Async ", ex);
                 MessageBox.Show($"Error sending DICOM file to server: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -373,13 +337,13 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Execute Select Query ", ex);
+                ErrHelper.Instance.LogError("Error handling Execute Select Query ", ex);
                 MessageBox.Show($"Error executing select query: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return (string.Empty, string.Empty, string.Empty);
             }
         }
 
-        private void AddDicomTags(DicomDataset dicomDataset, int width, int height, string photometricInterpretation, ushort samplesPerPixel, PatientModel patientModel, (string StudyInsUID, string SOPClassUID, string PName)? additionalTags = null)
+        private async void AddDicomTags(DicomDataset dicomDataset, int width, int height, string photometricInterpretation, ushort samplesPerPixel, PatientModel patientModel, (string StudyInsUID, string SOPClassUID, string PName)? additionalTags = null)
         {
             try
             {
@@ -406,7 +370,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Add Dicom Tags ", ex);
+                await ErrHelper.Instance.LogError("Error handling Add Dicom Tags ", ex);
                 MessageBox.Show($"Error adding DICOM tags: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -433,14 +397,14 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error converting image to DICOM", ex);
+                ErrHelper.Instance.LogError("Error converting image to DICOM", ex);
                 MessageBox.Show($"Error converting image to DICOM: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
         }
 
 
-        private void DisplayImage(string filePath, FlowLayoutPanel panel)
+        private async void DisplayImage(string filePath, FlowLayoutPanel panel)
         {
             try
             {
@@ -453,7 +417,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Display Image ", ex);
+                await ErrHelper.Instance.LogError("Error handling Display Image ", ex);
                 MessageBox.Show($"Error displaying image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -475,13 +439,13 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Create PictureBox ", ex);
+                ErrHelper.Instance.LogError("Error handling Create PictureBox ", ex);
                 MessageBox.Show($"Error creating picture box: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
         }
 
-        private void DisplayPdf(string filePath, FlowLayoutPanel panel,int dpi=1200)
+        private async void DisplayPdf(string filePath, FlowLayoutPanel panel,int dpi=1200)
         {
             try
             {
@@ -510,7 +474,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Display Pdf ", ex);
+                await ErrHelper.Instance.LogError("Error handling Display Pdf ", ex);
                 MessageBox.Show($"Error displaying PDF: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -558,7 +522,7 @@ namespace Convert_to_dcm
                         }
                         catch (Exception ex)
                         {
-                            LogError($"Error processing file {item}", ex);
+                            await ErrHelper.Instance.LogError($"Error processing file {item}", ex);
                         }
                     });
 
@@ -588,7 +552,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling btn Click ", ex);
+                await ErrHelper.Instance.LogError("Error handling btn Click ", ex);
                 MessageBox.Show($"Error handling button click: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -597,7 +561,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private void ResetImageSetting()
+        private async void ResetImageSetting()
         {
             try
             {
@@ -622,12 +586,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Reset Image Setting ", ex);
+                await ErrHelper.Instance.LogError("Error handling Reset Image Setting ", ex);
                 MessageBox.Show($"Error resetting image settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void SettingsToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void SettingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try
             {
@@ -639,12 +603,12 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling Settings ToolStripMenuItem ", ex);
+                await ErrHelper.Instance.LogError("Error handling Settings ToolStripMenuItem ", ex);
                 MessageBox.Show($"Error opening settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try
             {
@@ -652,7 +616,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling exit ToolStripMenuItem ", ex);
+                await ErrHelper.Instance.LogError("Error handling exit ToolStripMenuItem ", ex);
                 MessageBox.Show($"Error exiting application: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -693,7 +657,7 @@ namespace Convert_to_dcm
         }
 
 
-        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try
             {
@@ -704,7 +668,7 @@ namespace Convert_to_dcm
             }
             catch (Exception ex)
             {
-                LogError("Error handling about ToolStripMenuItem ", ex);
+                await ErrHelper.Instance.LogError("Error handling about ToolStripMenuItem ", ex);
                 MessageBox.Show($"Error opening about dialog: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

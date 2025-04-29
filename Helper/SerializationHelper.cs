@@ -1,4 +1,5 @@
-﻿using Convert_to_dcom.Class;
+﻿using Convert_to_dcm.Helper;
+using Convert_to_dcom.Class;
 using Convert_to_dcom.Helper;
 using System.Text.Json;
 
@@ -7,6 +8,7 @@ namespace FileCopyer.Classes.Design_Patterns.Helper
     internal class SerializationHelper 
     {
         private readonly IEncryptionHelper _encryptionHelper;
+        private readonly ErrHelper _errHelper = ErrHelper.Instance;
         public SerializationHelper(IEncryptionHelper encryptionHelper)
         {
             _encryptionHelper = encryptionHelper;
@@ -54,10 +56,9 @@ namespace FileCopyer.Classes.Design_Patterns.Helper
                     await JsonSerializer.SerializeAsync(fs, settings,_jsonOptions);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                await ErrHelper.Instance.LogError("Error saving settings", ex);
             }
         }
 
@@ -92,8 +93,9 @@ namespace FileCopyer.Classes.Design_Patterns.Helper
                 return settings;
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                await ErrHelper.Instance.LogError("Error saving settings", ex);
                 return new SettingsModel();
             }
         }

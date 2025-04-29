@@ -8,11 +8,11 @@ namespace Convert_to_dcom.Class
 {
     public class PatientModel
     {
-        public string PatientID { get; set; }
-        public string PatientName { get; set; }
-        public string PatientBirthDate { get; set; }
-        public string PatientSex { get; set; }
-        public string PatientAge { get; set; }
-        public string PatientDoc { get; set; }
+        public required string PatientID { get; set; }
+        public string? PatientName { get; set; }
+        public string? PatientBirthDate { get; set; }
+        public string? PatientSex { get; set; }
+        public string? PatientAge { get; set; }
+        public string? PatientDoc { get; set; }
     }
 }
