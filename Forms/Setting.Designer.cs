@@ -55,6 +55,8 @@
             txtUsername = new TextBox();
             txtInstance = new TextBox();
             toolTips = new ToolTip(components);
+            cbPixelFormat = new ComboBox();
+            label11 = new Label();
             panel1.SuspendLayout();
             panel2.SuspendLayout();
             SuspendLayout();
@@ -83,7 +85,7 @@
             // btnSaveSetings
             // 
             btnSaveSetings.Dock = DockStyle.Bottom;
-            btnSaveSetings.Location = new Point(0, 359);
+            btnSaveSetings.Location = new Point(0, 418);
             btnSaveSetings.Margin = new Padding(4, 3, 4, 3);
             btnSaveSetings.Name = "btnSaveSetings";
             btnSaveSetings.Size = new Size(211, 33);
@@ -96,7 +98,9 @@
             // panel1
             // 
             panel1.Controls.Add(label10);
+            panel1.Controls.Add(label11);
             panel1.Controls.Add(label9);
+            panel1.Controls.Add(cbPixelFormat);
             panel1.Controls.Add(comboModality);
             panel1.Controls.Add(tlschk);
             panel1.Controls.Add(label4);
@@ -107,9 +111,9 @@
             panel1.Controls.Add(titletxt);
             panel1.Controls.Add(destxt);
             panel1.Dock = DockStyle.Bottom;
-            panel1.Location = new Point(0, 161);
+            panel1.Location = new Point(0, 159);
             panel1.Name = "panel1";
-            panel1.Size = new Size(211, 198);
+            panel1.Size = new Size(211, 259);
             panel1.TabIndex = 6;
             toolTips.SetToolTip(panel1, "تنظیمات مربوط به سرور پکس");
             // 
@@ -144,7 +148,7 @@
             // tlschk
             // 
             tlschk.AutoSize = true;
-            tlschk.Location = new Point(22, 173);
+            tlschk.Location = new Point(22, 234);
             tlschk.Margin = new Padding(4, 3, 4, 3);
             tlschk.Name = "tlschk";
             tlschk.Size = new Size(62, 19);
@@ -155,7 +159,7 @@
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(123, 137);
+            label4.Location = new Point(123, 184);
             label4.Margin = new Padding(4, 0, 4, 0);
             label4.Name = "label4";
             label4.Size = new Size(54, 15);
@@ -208,11 +212,11 @@
             // 
             // destxt
             // 
-            destxt.Location = new Point(4, 122);
+            destxt.Location = new Point(4, 154);
             destxt.Margin = new Padding(4, 3, 4, 3);
             destxt.Multiline = true;
             destxt.Name = "destxt";
-            destxt.Size = new Size(116, 45);
+            destxt.Size = new Size(116, 74);
             destxt.TabIndex = 4;
             // 
             // panel2
@@ -226,7 +230,7 @@
             panel2.Controls.Add(txtUsername);
             panel2.Controls.Add(txtInstance);
             panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 46);
+            panel2.Location = new Point(0, 44);
             panel2.Name = "panel2";
             panel2.Size = new Size(211, 115);
             panel2.TabIndex = 7;
@@ -299,11 +303,29 @@
             txtInstance.Size = new Size(116, 23);
             txtInstance.TabIndex = 0;
             // 
+            // cbPixelFormat
+            // 
+            cbPixelFormat.FormattingEnabled = true;
+            cbPixelFormat.Location = new Point(4, 122);
+            cbPixelFormat.Name = "cbPixelFormat";
+            cbPixelFormat.Size = new Size(116, 23);
+            cbPixelFormat.TabIndex = 3;
+            // 
+            // label11
+            // 
+            label11.AutoSize = true;
+            label11.Location = new Point(127, 126);
+            label11.Margin = new Padding(4, 0, 4, 0);
+            label11.Name = "label11";
+            label11.Size = new Size(70, 15);
+            label11.TabIndex = 15;
+            label11.Text = "PixelFormat";
+            // 
             // Setting
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(211, 392);
+            ClientSize = new Size(211, 451);
             Controls.Add(panel2);
             Controls.Add(panel1);
             Controls.Add(btnSaveSetings);
@@ -353,5 +375,7 @@
         private ComboBox comboModality;
         private Label label10;
         private TextBox txtAET;
+        private Label label11;
+        private ComboBox cbPixelFormat;
     }
 }

@@ -1,4 +1,5 @@
-﻿using static Convert_to_dcm.Model.DataSets;
+﻿using System.Drawing.Imaging;
+using static Convert_to_dcm.Model.DataSets;
 
 namespace Convert_to_dcom.Class
 {
@@ -18,6 +19,7 @@ namespace Convert_to_dcom.Class
             ServerPort = 0;
             ServerUseTls = false;
             ServerModality = Modality.CT;
+            PixelFormat = PixelFormat.Format24bppRgb;
         }
 
         public string ServerAddress { get; set; }
@@ -31,5 +33,6 @@ namespace Convert_to_dcom.Class
         public string Catalog { get; set; }
         public Modality ServerModality { get; set; } 
         public int DPI { get; set; }
+        public PixelFormat PixelFormat { get; set; }
     }
 }

@@ -626,7 +626,7 @@ namespace Convert_to_dcm
             BitmapData bmpData = bitmap.LockBits(
                 new Rectangle(0, 0, bitmap.Width, bitmap.Height),
                 ImageLockMode.ReadOnly,
-                PixelFormat.Format24bppRgb);
+                SettingsModel.PixelFormat);
 
             int stride = bmpData.Stride;
             int width = bitmap.Width;

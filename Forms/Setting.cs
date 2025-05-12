@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,6 +37,7 @@ namespace Convert_to_dcm
             try
             {
                 comboModality.DataSource = Enum.GetValues(typeof(Modality));
+                cbPixelFormat.DataSource = Enum.GetValues(typeof(PixelFormat));
             }
             catch (Exception ex)
             {
@@ -66,6 +68,7 @@ namespace Convert_to_dcm
                 settingsModel.username = txtUsername.Text;
                 settingsModel.password = txtPassword.Text;
                 settingsModel.ServerModality = (Modality?)comboModality.SelectedItem ?? default(Modality);
+                settingsModel.PixelFormat = (PixelFormat?)cbPixelFormat.SelectedItem ?? default(PixelFormat);
                 settingsModel.Catalog = txtCatalog.Text.Trim();
                 settingsModel.ServerAET = txtAET.Text.Trim();
 
@@ -121,6 +124,7 @@ namespace Convert_to_dcm
                 txtCatalog.Text = settingsModel.Catalog;
                 txtAET.Text = settingsModel.ServerAET;
                 comboModality.SelectedItem = settingsModel.ServerModality;
+                cbPixelFormat.SelectedItem = settingsModel.PixelFormat;
             }
             catch (Exception ex)
             {
