@@ -34,8 +34,11 @@
             label1 = new Label();
             btnSaveSetings = new Button();
             panel1 = new Panel();
+            chkpatientexist = new CheckBox();
             label10 = new Label();
+            label11 = new Label();
             label9 = new Label();
+            cbPixelFormat = new ComboBox();
             comboModality = new ComboBox();
             tlschk = new CheckBox();
             label4 = new Label();
@@ -55,8 +58,6 @@
             txtUsername = new TextBox();
             txtInstance = new TextBox();
             toolTips = new ToolTip(components);
-            cbPixelFormat = new ComboBox();
-            label11 = new Label();
             panel1.SuspendLayout();
             panel2.SuspendLayout();
             SuspendLayout();
@@ -97,6 +98,7 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(chkpatientexist);
             panel1.Controls.Add(label10);
             panel1.Controls.Add(label11);
             panel1.Controls.Add(label9);
@@ -117,6 +119,16 @@
             panel1.TabIndex = 6;
             toolTips.SetToolTip(panel1, "تنظیمات مربوط به سرور پکس");
             // 
+            // chkpatientexist
+            // 
+            chkpatientexist.AutoSize = true;
+            chkpatientexist.Location = new Point(73, 234);
+            chkpatientexist.Name = "chkpatientexist";
+            chkpatientexist.Size = new Size(128, 19);
+            chkpatientexist.TabIndex = 16;
+            chkpatientexist.Text = "پرونده بیمار چک شود";
+            chkpatientexist.UseVisualStyleBackColor = true;
+            // 
             // label10
             // 
             label10.AutoSize = true;
@@ -127,6 +139,16 @@
             label10.TabIndex = 15;
             label10.Text = "ServerAET";
             // 
+            // label11
+            // 
+            label11.AutoSize = true;
+            label11.Location = new Point(127, 126);
+            label11.Margin = new Padding(4, 0, 4, 0);
+            label11.Name = "label11";
+            label11.Size = new Size(70, 15);
+            label11.TabIndex = 15;
+            label11.Text = "PixelFormat";
+            // 
             // label9
             // 
             label9.AutoSize = true;
@@ -136,6 +158,14 @@
             label9.Size = new Size(54, 15);
             label9.TabIndex = 15;
             label9.Text = "Modality";
+            // 
+            // cbPixelFormat
+            // 
+            cbPixelFormat.FormattingEnabled = true;
+            cbPixelFormat.Location = new Point(4, 122);
+            cbPixelFormat.Name = "cbPixelFormat";
+            cbPixelFormat.Size = new Size(116, 23);
+            cbPixelFormat.TabIndex = 3;
             // 
             // comboModality
             // 
@@ -148,7 +178,7 @@
             // tlschk
             // 
             tlschk.AutoSize = true;
-            tlschk.Location = new Point(22, 234);
+            tlschk.Location = new Point(4, 234);
             tlschk.Margin = new Padding(4, 3, 4, 3);
             tlschk.Name = "tlschk";
             tlschk.Size = new Size(62, 19);
@@ -303,24 +333,6 @@
             txtInstance.Size = new Size(116, 23);
             txtInstance.TabIndex = 0;
             // 
-            // cbPixelFormat
-            // 
-            cbPixelFormat.FormattingEnabled = true;
-            cbPixelFormat.Location = new Point(4, 122);
-            cbPixelFormat.Name = "cbPixelFormat";
-            cbPixelFormat.Size = new Size(116, 23);
-            cbPixelFormat.TabIndex = 3;
-            // 
-            // label11
-            // 
-            label11.AutoSize = true;
-            label11.Location = new Point(127, 126);
-            label11.Margin = new Padding(4, 0, 4, 0);
-            label11.Name = "label11";
-            label11.Size = new Size(70, 15);
-            label11.TabIndex = 15;
-            label11.Text = "PixelFormat";
-            // 
             // Setting
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -377,5 +389,6 @@
         private TextBox txtAET;
         private Label label11;
         private ComboBox cbPixelFormat;
+        private CheckBox chkpatientexist;
     }
 }

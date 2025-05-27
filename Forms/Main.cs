@@ -235,6 +235,14 @@ namespace Convert_to_dcm
                     additionalTags = GetCachedOrExecuteSelectQuery(SettingsModel, patientModel.PatientID);
                 }
 
+                if (SettingsModel.AlwaysCheckPatientExist)
+                {
+                    if (additionalTags == null)
+                    {
+                        MessageBox.Show("پرونده بیمار پیدا نشد لطفا از صحت اطلاعات وارد شده اطمینان حاصل کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+
                 if (filePath != null && File.Exists(filePath))
                 {
                     using (Bitmap bitmapimg = new Bitmap(filePath))
@@ -266,7 +274,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private  bool IsServerSettingsValid()
+        private bool IsServerSettingsValid()
         {
             try
             {
@@ -445,7 +453,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private async void DisplayPdf(string filePath, FlowLayoutPanel panel,int dpi=1200)
+        private async void DisplayPdf(string filePath, FlowLayoutPanel panel, int dpi = 1200)
         {
             try
             {
@@ -529,24 +537,6 @@ namespace Convert_to_dcm
                 // منتظر ماندن برای اتمام تمام وظایف
                 await Task.WhenAll(tasks);
 
-                //foreach (var item in ImagePath)
-                //{
-                //    if (!string.IsNullOrEmpty(item) && File.Exists(item))
-                //    {
-                //        if (await ConvertToDicomAndSendAsync(item, PatientModel))
-                //        {
-                //            MessageBox.Show($"فایل {Path.GetFileNameWithoutExtension(item)} تبدیل و ارسال شد", "اعلام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                //        }
-                //        else
-                //        {
-                //            MessageBox.Show("خطا در تبدیل یا ارسال فایل به سرور PACS", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                //        }
-                //    }
-                //    else
-                //    {
-                //        MessageBox.Show("شما باید فایل را انتخاب کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                //    }
-                //}
                 ResetImageSetting();
 
             }
@@ -678,14 +668,39 @@ namespace Convert_to_dcm
             // اگر PatientID تغییر نکرده باشد، مقدار کش شده را بازگردان
             if (cachedPatientID == patientID && cachedTags.HasValue)
             {
+                // اطمینان از معتبر بودن مقادیر کش شده در صورت فعال بودن AlwaysCheckPatientExist
+                if (settings.AlwaysCheckPatientExist)
+                {
+                    var cached = cachedTags.Value;
+                    if (string.IsNullOrWhiteSpace(cached.StudyInsUID) || 
+                        string.IsNullOrWhiteSpace(cached.SOPClassUID) || 
+                        string.IsNullOrWhiteSpace(cached.PName))
+                    {
+                        throw new InvalidOperationException("اطلاعات بیمار در پکس یافت نشد");
+                    }
+                }
                 return cachedTags.Value;
             }
 
-            // اگر PatientID تغییر کرده باشد، مقدار جدید را از دیتابیس بگیر و کش کن
-            cachedTags = ExecuteSelectQuery(settings, patientID);
+            // اجرای کوئری جدید
+            var result = ExecuteSelectQuery(settings, patientID);
+
+            // بررسی اعتبار نتیجه در صورت فعال بودن AlwaysCheckPatientExist
+            if (settings.AlwaysCheckPatientExist)
+            {
+                if (string.IsNullOrWhiteSpace(result.StudyInsUID) || 
+                    string.IsNullOrWhiteSpace(result.SOPClassUID) || 
+                    string.IsNullOrWhiteSpace(result.name))
+                {
+                    throw new InvalidOperationException("اطلاعات بیمار در پکس یافت نشد");
+                }
+            }
+
+            // ذخیره در کش
+            cachedTags = result;
             cachedPatientID = patientID;
 
-            return cachedTags.Value;
+            return result;
         }
 
         private void btnreset_Click(object sender, EventArgs e)

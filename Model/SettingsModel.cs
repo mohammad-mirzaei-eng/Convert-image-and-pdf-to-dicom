@@ -20,6 +20,7 @@ namespace Convert_to_dcom.Class
             ServerUseTls = false;
             ServerModality = Modality.CT;
             PixelFormat = PixelFormat.Format24bppRgb;
+            AlwaysCheckPatientExist = false;
         }
 
         public string ServerAddress { get; set; }
@@ -32,6 +33,7 @@ namespace Convert_to_dcom.Class
         public string password { get; set; }
         public string Catalog { get; set; }
         public Modality ServerModality { get; set; } 
+        public bool AlwaysCheckPatientExist { get; set; } 
         public int DPI { get; set; }
         public PixelFormat PixelFormat { get; set; }
     }

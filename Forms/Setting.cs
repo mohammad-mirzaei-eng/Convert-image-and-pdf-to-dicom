@@ -2,16 +2,7 @@
 using Convert_to_dcom.Class;
 using Convert_to_dcom.Class.Helper;
 using FileCopyer.Classes.Design_Patterns.Helper;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using static Convert_to_dcm.Model.DataSets;
 
 namespace Convert_to_dcm
@@ -71,6 +62,7 @@ namespace Convert_to_dcm
                 settingsModel.PixelFormat = (PixelFormat?)cbPixelFormat.SelectedItem ?? default(PixelFormat);
                 settingsModel.Catalog = txtCatalog.Text.Trim();
                 settingsModel.ServerAET = txtAET.Text.Trim();
+                settingsModel.AlwaysCheckPatientExist=chkpatientexist.Checked;
 
                 if (!Serverhelper.IsValidIP(settingsModel.ServerAddress))
                 {
@@ -125,6 +117,7 @@ namespace Convert_to_dcm
                 txtAET.Text = settingsModel.ServerAET;
                 comboModality.SelectedItem = settingsModel.ServerModality;
                 cbPixelFormat.SelectedItem = settingsModel.PixelFormat;
+                chkpatientexist.Checked = settingsModel.AlwaysCheckPatientExist;
             }
             catch (Exception ex)
             {
