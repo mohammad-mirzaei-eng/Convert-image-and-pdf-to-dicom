@@ -136,11 +136,24 @@ namespace Convert_to_dcm
         {
             try
             {
-                if (pictureBox.Image != null)
+                // pictureBox.Image will be stretched by StretchImage.
+                // We need the original image dimensions to calculate the new panel size correctly.
+                if (pictureBox.Tag is Size originalImageSize)
                 {
-                    pictureBox.Width = (int)(pictureBox.Image.Width * ZoomFactor);
-                    pictureBox.Height = (int)(pictureBox.Image.Height * ZoomFactor);
-                    pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+                    // Calculate new dimensions for the container panel
+                    int newWidth = (int)(originalImageSize.Width * this.ZoomFactor);
+                    int newHeight = (int)(originalImageSize.Height * this.ZoomFactor);
+
+                    // Ensure minimum dimensions
+                    newWidth = Math.Max(newWidth, 50); // Example minimum width
+                    newHeight = Math.Max(newHeight, 50); // Example minimum height
+
+                    if (pictureBox.Parent is Panel containerPanel)
+                    {
+                        // Resize the container panel. The PictureBox inside will stretch its image.
+                        containerPanel.Size = new Size(newWidth, newHeight);
+                    }
+                    // No need to set pictureBox.SizeMode here as it's StretchImage
                 }
                 else
                 {
@@ -465,19 +478,27 @@ namespace Convert_to_dcm
             {
                 Panel itemPanel = new Panel
                 {
-                    Size = new Size(150, 180), // Example size, adjust as needed
+                    // Initial size of the container panel should be based on ZoomFactor=1.0
+                    // Or, a fixed thumbnail size if that's preferred for initial display,
+                    // and then zooming adjusts from there.
+                    // The current CreateFlowLayoutItem uses a fixed size (150,180),
+                    // so zooming will make these panels larger or smaller.
+                    Size = new Size((int)(previewImage.Width * ZoomFactor), (int)(previewImage.Height * ZoomFactor) + 25), // +25 for button
                     Margin = new Padding(5),
                     BorderStyle = BorderStyle.FixedSingle
                 };
+                // Ensure the panel size respects some minimums if image is too small
+                itemPanel.Width = Math.Max(itemPanel.Width, 80); // Min width for panel
+                itemPanel.Height = Math.Max(itemPanel.Height, 80 + 25); // Min height for panel + button
+
 
                 PictureBox pictureBox = new PictureBox
                 {
-                    Image = new Bitmap(previewImage), // Create a copy for the PictureBox
-                    SizeMode = PictureBoxSizeMode.Zoom,
-                    Dock = DockStyle.Fill, // Fill the panel except for button area
-                    Tag = imagePath // Store imagePath for potential full view later
+                    Image = new Bitmap(previewImage),
+                    SizeMode = PictureBoxSizeMode.StretchImage, // Changed for smooth zoom
+                    Dock = DockStyle.Fill,
+                    Tag = previewImage.Size // Store original image size for zoom calculations
                 };
-                // Assign generic mouse wheel handler if needed, or a specific one for items
                 pictureBox.MouseWheel += pic1_MouseWheel;
 
                 Button removeButton = new Button
@@ -571,14 +592,17 @@ namespace Convert_to_dcm
                     var page = document.Pages[0];
                     SizeF pageSize = page.Size;
 
-                    // Target size for the PictureBox within CreateFlowLayoutItem (e.g., 150 width for thumbnail)
-                    // Let CreateFlowLayoutItem handle the final PictureBox sizing, here we just render.
-                    // For a thumbnail, a fixed width might be good, e.g., 150px.
-                    int renderWidth = 150;
-                    int renderHeight = (int)(pageSize.Height * (double)renderWidth / pageSize.Width);
-                    renderHeight = Math.Max(renderHeight, 10); // Ensure min height
+                    // Render PDF to a size suitable for initial thumbnail display,
+                    // matching the logic in CreateFlowLayoutItem's initial sizing if possible,
+                    // or just a reasonable default thumbnail size.
+                    // Let's aim for a width of around 150 for the image itself, button is extra.
+                    int targetImageWidth = 150;
+                    int targetImageHeight = (int)(pageSize.Height * (double)targetImageWidth / pageSize.Width);
+                    targetImageHeight = Math.Max(targetImageHeight, 100); // Min image height
+                    targetImageWidth = Math.Max(targetImageWidth, 100); // Min image width
 
-                    using (var renderedImage = document.Render(0, renderWidth, renderHeight, false))
+
+                    using (var renderedImage = document.Render(0, targetImageWidth, targetImageHeight, false))
                     {
                         // CreateFlowLayoutItem will make its own copy
                         return CreateFlowLayoutItem(renderedImage, filePath);
