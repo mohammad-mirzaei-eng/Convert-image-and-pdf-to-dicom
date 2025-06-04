@@ -1,6 +1,7 @@
 ﻿using Convert_to_dcm.Sql;
-using Convert_to_dcom.Class;
-using Convert_to_dcom.Class.Helper;
+using Convert_to_dcom.Class; // For SettingsModel used as property
+using Convert_to_dcom.Class.Helper; // For SerializationHelper, Serverhelper
+using Convert_to_dcm.Helper; // For DicomConversionHelper
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
 using FellowOakDicom.IO.Buffer;
@@ -81,8 +82,7 @@ namespace Convert_to_dcm
             }
             catch (Exception logEx)
             {
-                Clipboard.Clear();
-                Clipboard.SetText(logEx.Message);
+                // Clipboard operations removed
                 MessageBox.Show($"Error logging exception: {logEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -275,7 +275,12 @@ namespace Convert_to_dcm
                 {
                     using (Bitmap bitmapimg = new Bitmap(filePath))
                     {
-                        var dicomFile = ConvertImageToDicom(bitmapimg, patientModel, additionalTags);
+                        // Updated call to use DicomConversionHelper
+                        var dicomFile = DicomConversionHelper.ConvertImageToDicom(
+                            bitmapimg,
+                            patientModel,
+                            SettingsModel.ServerModality.ToString(), // Pass modality
+                            additionalTags);
 
                         if (dicomFile != null)
                         {
@@ -353,10 +358,33 @@ namespace Convert_to_dcm
 
         private (string StudyInsUID, string SOPClassUID, string name) ExecuteSelectQuery(SettingsModel settings, string pid)
         {
+            ISqlService sqlService; // Changed from SQLCLASS to ISqlService
             try
             {
-                SQLCLASS sqlClass = new SQLCLASS(settings);
-                DataTable resultTable = sqlClass.ExecuteSelectQuery(pid, settings.ServerModality.ToString());
+                sqlService = new SQLCLASS(settings); // Instantiation remains the same, but assigned to interface type
+            }
+            catch (ArgumentNullException ex) // Catching null settings
+            {
+                LogError("Error initializing SQLCLASS: Settings cannot be null.", ex);
+                MessageBox.Show($"Error initializing database connection: {ex.Message}", "Configuration Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return (string.Empty, string.Empty, string.Empty);
+            }
+            catch (InvalidOperationException ex) // Catching missing/invalid settings
+            {
+                LogError("Error initializing SQLCLASS: Invalid settings provided.", ex);
+                MessageBox.Show($"Error initializing database connection: {ex.Message}", "Configuration Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return (string.Empty, string.Empty, string.Empty);
+            }
+            catch (Exception ex) // Catch any other unexpected errors during SQLCLASS instantiation
+            {
+                LogError("Unexpected error initializing SQLCLASS.", ex);
+                MessageBox.Show($"An unexpected error occurred while setting up the database connection: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return (string.Empty, string.Empty, string.Empty);
+            }
+
+            try
+            {
+                DataTable resultTable = sqlService.ExecuteSelectQuery(pid, settings.ServerModality.ToString()); // Changed to sqlService
 
                 if (resultTable.Rows.Count > 0)
                 {
@@ -371,85 +399,38 @@ namespace Convert_to_dcm
                     return (string.Empty, string.Empty, string.Empty);
                 }
             }
-            catch (Exception ex)
+            catch (SqlCustomException ex) // Specific exception from SQLCLASS
             {
-                LogError("Error handling Execute Select Query ", ex);
-                MessageBox.Show($"Error executing select query: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogError("Error executing SQL select query (SqlCustomException).", ex);
+                MessageBox.Show($"Database query error: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return (string.Empty, string.Empty, string.Empty);
+            }
+            catch (Exception ex) // General exceptions during query execution
+            {
+                LogError("Unexpected error executing select query.", ex);
+                MessageBox.Show($"An unexpected error occurred during data retrieval: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return (string.Empty, string.Empty, string.Empty);
             }
         }
 
-        private void AddDicomTags(DicomDataset dicomDataset, int width, int height, string photometricInterpretation, ushort samplesPerPixel, PatientModel patientModel, (string StudyInsUID, string SOPClassUID, string PName)? additionalTags = null)
-        {
-            try
-            {
-                dicomDataset.Add(DicomTag.PatientName, !string.IsNullOrEmpty(additionalTags?.PName.Trim()) ? additionalTags?.PName : patientModel.PatientName);
-                dicomDataset.Add(DicomTag.PatientID, patientModel.PatientID);
-                dicomDataset.Add(DicomTag.StudyInstanceUID, !string.IsNullOrEmpty(additionalTags?.StudyInsUID.Trim()) ? additionalTags?.StudyInsUID : DicomUID.Generate().UID);
-                dicomDataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate().UID);
-                dicomDataset.Add(DicomTag.SOPInstanceUID, DicomUID.Generate().UID);
-                dicomDataset.Add(DicomTag.SOPClassUID, !string.IsNullOrEmpty(additionalTags?.SOPClassUID.Trim()) ? additionalTags?.SOPClassUID : DicomUID.SecondaryCaptureImageStorage.UID);
-                dicomDataset.Add(DicomTag.PhotometricInterpretation, photometricInterpretation);
-                dicomDataset.Add(DicomTag.TransferSyntaxUID, DicomUID.ExplicitVRLittleEndian);
-                dicomDataset.Add(DicomTag.Rows, (ushort)height);
-                dicomDataset.Add(DicomTag.Columns, (ushort)width);
-                dicomDataset.Add(DicomTag.BitsAllocated, (ushort)8);
-                dicomDataset.Add(DicomTag.BitsStored, (ushort)8);
-                dicomDataset.Add(DicomTag.HighBit, (ushort)7);
-                dicomDataset.Add(DicomTag.PixelRepresentation, (ushort)0);
-                dicomDataset.Add(DicomTag.Modality, SettingsModel.ServerModality);
-                dicomDataset.Add(DicomTag.SamplesPerPixel, samplesPerPixel);
-
-                string currentTime = DateTime.Now.ToString("HHmmss");
-                dicomDataset.Add(DicomTag.StudyTime, currentTime);
-                dicomDataset.Add(DicomTag.SeriesTime, currentTime);
-            }
-            catch (Exception ex)
-            {
-                LogError("Error handling Add Dicom Tags ", ex);
-                MessageBox.Show($"Error adding DICOM tags: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private DicomFile? ConvertImageToDicom(Bitmap bitmap, PatientModel patientModel, (string StudyInsUID, string SOPClassUID, string PName)? additionalTags)
-        {
-            try
-            {
-                var dicomFile = new DicomFile();
-                var dicomDataset = dicomFile.Dataset;
-                dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.ExplicitVRLittleEndian;
-
-                AddDicomTags(dicomDataset, bitmap.Width, bitmap.Height, PhotometricInterpretation.Rgb.Value, 3, patientModel, additionalTags);
-
-                // فراخوانی GetBitmapPixels برای استخراج داده‌های دقیق پیکسل‌ها
-                byte[] pixelDataArray = GetBitmapPixels(bitmap);
-
-                // اضافه کردن داده‌های پیکسل به فایل DICOM
-                DicomPixelData pixelData = DicomPixelData.Create(dicomDataset, true);
-                pixelData.PlanarConfiguration = PlanarConfiguration.Interleaved;
-                pixelData.AddFrame(new MemoryByteBuffer(pixelDataArray));
-
-                return dicomFile;
-            }
-            catch (Exception ex)
-            {
-                LogError("Error converting image to DICOM", ex);
-                MessageBox.Show($"Error converting image to DICOM: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return null;
-            }
-        }
-
+        // AddDicomTags method removed - now in DicomConversionHelper
+        // ConvertImageToDicom method removed - now in DicomConversionHelper
+        // GetBitmapPixels method (later in file) will also be removed.
 
         private void DisplayImage(string filePath, FlowLayoutPanel panel)
         {
             try
             {
-                if (Img == null)
+                // Load a new Bitmap for each image. Do not use class-level Img field here.
+                using (Image sourceImage = Image.FromFile(filePath)) // Load image from file
                 {
-                    Img = new Bitmap(Image.FromFile(filePath));
+                    // CreatePictureBox will make its own copy of the image for the PictureBox
+                    PictureBox? pictureBox = CreatePictureBox(sourceImage);
+                    if (pictureBox != null)
+                    {
+                        panel.Controls.Add(pictureBox);
+                    }
                 }
-                PictureBox? pictureBox = CreatePictureBox(Img);
-                panel.Controls.Add(pictureBox);
             }
             catch (Exception ex)
             {
@@ -465,10 +446,12 @@ namespace Convert_to_dcm
                 var pictureBox = new PictureBox
                 {
                     BorderStyle = BorderStyle.FixedSingle,
-                    Size = new Size(574, 454),
+                    Size = new Size(574, 454), // Default size, will be adjusted by zoom
                     SizeMode = PictureBoxSizeMode.Zoom,
                     Visible = true,
-                    Image = image
+                    // Create a new Bitmap for the PictureBox to ensure it has its own copy,
+                    // especially if the source 'image' might be disposed by the caller.
+                    Image = new Bitmap(image)
                 };
                 pictureBox.MouseWheel += pic1_MouseWheel;
                 return pictureBox;
@@ -487,9 +470,36 @@ namespace Convert_to_dcm
             {
                 using (var document = PdfDocument.Load(filePath))
                 {
-                    var image = document.Render(0, 9000, 9000, false);
-                    PictureBox? pictureBox = CreatePictureBox(image);
-                    panel.Controls.Add(pictureBox);
+                    var page = document.Pages[0]; // Access the first page
+                    SizeF pageSize = page.Size;   // Get original page size in points
+
+                    int targetBoxWidth = 574;  // Target width of the PictureBox from CreatePictureBox
+                    int targetBoxHeight = 454; // Target height of the PictureBox from CreatePictureBox
+
+                    // Calculate new dimensions maintaining aspect ratio
+                    double ratioX = (double)targetBoxWidth / pageSize.Width;
+                    double ratioY = (double)targetBoxHeight / pageSize.Height;
+                    double ratio = Math.Min(ratioX, ratioY); // Use the smaller ratio to fit entirely
+
+                    int newWidth = (int)(pageSize.Width * ratio);
+                    int newHeight = (int)(pageSize.Height * ratio);
+
+                    // Ensure minimum dimensions if calculation results in zero or very small numbers
+                    newWidth = Math.Max(newWidth, 10);
+                    newHeight = Math.Max(newHeight, 10);
+
+                    // Render the page with the new dimensions.
+                    // PdfiumViewer's Render method takes pixel dimensions.
+                    // The boolean flag (last parameter) is for 'forPrinting'. False for screen.
+                    using (var renderedImage = document.Render(0, newWidth, newHeight, false))
+                    {
+                        // CreatePictureBox will make its own copy
+                        PictureBox? pictureBox = CreatePictureBox(renderedImage);
+                        if (pictureBox != null)
+                        {
+                             panel.Controls.Add(pictureBox);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -568,7 +578,12 @@ namespace Convert_to_dcm
                 //    }
                 //}
                 ResetImageSetting();
-
+                // Img field is no longer primarily populated by DisplayImage/DisplayPdf
+                // It might still be used by pic1_MouseWheel if pic1 is the main PictureBox,
+                // but dynamically created PictureBoxes now correctly use their own images.
+                // The Img field should be reviewed for its role if pic1 (the main form PictureBox) is also used.
+                // For now, setting it to null in ResetImageSetting is consistent.
+                Img = null;
             }
             catch (Exception ex)
             {
@@ -585,10 +600,30 @@ namespace Convert_to_dcm
         {
             try
             {
-                panel1.Controls.Clear();
+                // Disposing images held by PictureBoxes in panel1 before clearing
+                foreach (Control ctrl in panel1.Controls)
+                {
+                    if (ctrl is FlowLayoutPanel flowPanel)
+                    {
+                        foreach(Control pbCtrl in flowPanel.Controls)
+                        {
+                            if (pbCtrl is PictureBox pb)
+                            {
+                                pb.Image?.Dispose(); // Dispose the image
+                            }
+                        }
+                        flowPanel.Controls.Clear(); // Clear controls from FlowLayoutPanel
+                    }
+                }
+                panel1.Controls.Clear(); // Clear the FlowLayoutPanel itself from panel1
                 
                 cachedPatientID = null;
+                // Img = null; // Already handled by the btn_Click finally block logic if needed.
+                // Or, if Img is specifically for a main PictureBox (not in FlowLayoutPanel), manage its lifecycle separately.
+                // For now, let's ensure it's nulled if it was tied to the cleared content.
+                Img?.Dispose(); // Dispose if it holds an image
                 Img = null;
+
                 cachedTags = null;
 
                 if (ImagePath != null && ImagePath.Count > 0)
@@ -641,41 +676,7 @@ namespace Convert_to_dcm
             }
         }
 
-        private byte[] GetBitmapPixels(Bitmap bitmap)
-        {
-            BitmapData bmpData = bitmap.LockBits(
-                new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                ImageLockMode.ReadOnly,
-                PixelFormat.Format24bppRgb);
-
-            int stride = bmpData.Stride;
-            int width = bitmap.Width;
-            int height = bitmap.Height;
-            int bytesPerPixel = 3; // برای تصاویر RGB
-
-            byte[] rawData = new byte[stride * height];
-            Marshal.Copy(bmpData.Scan0, rawData, 0, rawData.Length);
-            bitmap.UnlockBits(bmpData);
-
-            byte[] result = new byte[width * height * bytesPerPixel];
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    int bmpIndex = y * stride + x * bytesPerPixel;
-                    int dcmIndex = (y * width + x) * bytesPerPixel;
-
-                    // RGB به BGR تبدیل رنگ‌ها
-                    result[dcmIndex] = rawData[bmpIndex + 2];     // R
-                    result[dcmIndex + 1] = rawData[bmpIndex + 1]; // G
-                    result[dcmIndex + 2] = rawData[bmpIndex];     // B
-                }
-            }
-
-            return result;
-        }
-
+        // GetBitmapPixels method removed - now in DicomConversionHelper
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {

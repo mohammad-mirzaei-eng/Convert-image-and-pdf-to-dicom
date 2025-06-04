@@ -1,9 +1,9 @@
-﻿using Convert_to_dcom.Class;
+using Convert_to_dcm.Model; // Changed from Convert_to_dcom.Class
 using Microsoft.Data.SqlClient;
 using System.Data;
-using static System.ComponentModel.Design.ObjectSelectorEditor;
-using System.Security.Cryptography;
-using System; // Added for Exception base class
+// using static System.ComponentModel.Design.ObjectSelectorEditor; // This seems unused, removing
+// using System.Security.Cryptography; // This seems unused, removing
+using System;
 
 namespace Convert_to_dcm.Sql
 {
@@ -15,24 +15,20 @@ namespace Convert_to_dcm.Sql
         public SqlCustomException(string message, Exception inner) : base(message, inner) { }
     }
 
-    public class SQLCLASS : ISqlService // Made public and implements ISqlService
+    public class SQLCLASS : ISqlService
     {
         private readonly SettingsModel _setting;
-        private readonly string constring; // Made readonly as it's set in constructor
+        private readonly string constring;
 
         public SQLCLASS(SettingsModel setting)
         {
             _setting = setting ?? throw new ArgumentNullException(nameof(setting), "SettingsModel cannot be null.");
 
-            // Validate required settings
             if (String.IsNullOrEmpty(_setting.ServerAddress) ||
                 String.IsNullOrEmpty(_setting.Catalog) ||
-                String.IsNullOrEmpty(_setting.username) || // Assuming username/password are used when IntegratedSecurity=False
-                String.IsNullOrEmpty(_setting.password)))
+                String.IsNullOrEmpty(_setting.username) ||
+                String.IsNullOrEmpty(_setting.password))
             {
-                // Instance can sometimes be optional, depending on SQL Server configuration (e.g. default instance)
-                // For this example, let's assume it might be optional or handled if _setting.Instance is empty/null.
-                // However, if it's strictly required, add it to the check: String.IsNullOrEmpty(_setting.Instance)
                 throw new InvalidOperationException("Required database settings are missing. Please check ServerAddress, Catalog, Username, and Password.");
             }
 
@@ -42,24 +38,21 @@ namespace Convert_to_dcm.Sql
                 {
                     DataSource = String.IsNullOrEmpty(_setting.Instance) ? _setting.ServerAddress : $"{_setting.ServerAddress}\\{_setting.Instance}",
                     InitialCatalog = _setting.Catalog,
-                    IntegratedSecurity = false, // Explicitly set based on previous String.Format; adjust if logic needs to be dynamic
+                    IntegratedSecurity = false,
                     UserID = _setting.username,
                     Password = _setting.password,
-                    TrustServerCertificate = true // As per original string
+                    TrustServerCertificate = true
                 };
                 constring = builder.ConnectionString;
             }
             catch (Exception ex)
             {
-                // Wrap any exception during connection string construction
                 throw new InvalidOperationException("Failed to build connection string: " + ex.Message, ex);
             }
         }
 
         public DataTable ExecuteSelectQuery(string pid, string modality)
         {
-            // constring is now initialized in the constructor.
-            // Throw an exception if constring is null or empty, which might happen if constructor failed silently (though it now throws).
             if (String.IsNullOrEmpty(constring))
             {
                 throw new InvalidOperationException("Connection string is not initialized. SQLCLASS may not have been constructed properly.");
@@ -70,9 +63,6 @@ namespace Convert_to_dcm.Sql
                             FROM [PPWDB].[dbo].[StudyTab] AS a
                             INNER JOIN [PPWDB].[dbo].[ImageTab] AS b ON a.StudyKey = b.StudyKey
                             WHERE a.PID = @PID and Modality = @MODALITY";
-
-            // The original check for settings is no longer needed here as it's done in constructor.
-            // If settings were invalid, constructor would have thrown an exception.
 
             using (SqlConnection connection = new SqlConnection(constring))
             {
@@ -91,21 +81,16 @@ namespace Convert_to_dcm.Sql
                             return resultTable;
                         }
                     }
-                    catch (SqlException ex) // Catch more specific SqlException first
+                    catch (SqlException ex)
                     {
-                        // Log ex here if you have a logger
                         throw new SqlCustomException("A database error occurred while executing the select query: " + ex.Message, ex);
                     }
-                    catch (Exception ex) // Catch any other exceptions
+                    catch (Exception ex)
                     {
-                        // Log ex here if you have a logger
                         throw new SqlCustomException("An unexpected error occurred while executing the select query: " + ex.Message, ex);
                     }
-                    // No finally block needed here explicitly for connection.Close() because 'using' statement handles it.
                 }
             }
-            // The else block returning new DataTable() is removed. If settings are invalid, constructor throws.
-            // If constring is somehow still null/empty (which shouldn't happen), an InvalidOperationException is thrown at the start of the method.
         }
     }
 }
