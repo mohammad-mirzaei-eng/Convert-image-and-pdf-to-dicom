@@ -20,8 +20,17 @@ namespace Convert_to_dcm
     public partial class Main : System.Windows.Forms.Form
     {
         private SettingsModel SettingsModel { get; set; } = new SettingsModel();
+﻿using System.Collections.Concurrent; // For ConcurrentBag
+
+// ... other using statements ...
+
+namespace Convert_to_dcm
+{
+    public partial class Main : System.Windows.Forms.Form
+    {
+        private SettingsModel SettingsModel { get; set; } = new SettingsModel();
         private PatientModel PatientModel { get; set; }
-        private List<string> ImagePath = new List<string>();
+        private List<string> ImagePath = new List<string>(); // Stores paths of images currently displayed
         private (string StudyInsUID, string SOPClassUID, string PName)? cachedTags = null;
         private string? cachedPatientID = null;
         private float ZoomFactor { get; set; } = 1.0f;
@@ -207,28 +216,55 @@ namespace Convert_to_dcm
                     return;
                 }
 
-                ImagePath.AddRange(fileNames);
+                ImagePath.AddRange(fileNames); // Keep track of all image paths being processed
+
+                // Use a concurrent bag to collect panels created by worker threads
+                var itemPanels = new ConcurrentBag<Panel>();
                 ParallelOptions parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-                Parallel.ForEach(fileNames, parallelOptions, item =>
+                Parallel.ForEach(fileNames, parallelOptions, filePath =>
                 {
-                    string extension = Path.GetExtension(item).ToLower();
+                    Panel? itemPanel = null;
+                    string extension = Path.GetExtension(filePath).ToLower();
                     if (extension == ".pdf")
                     {
-                        DisplayPdf(item, flowLayoutPanel);
+                        itemPanel = DisplayPdf(filePath); // DisplayPdf now returns a Panel
                     }
                     else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp")
                     {
-                        DisplayImage(item, flowLayoutPanel);
+                        itemPanel = DisplayImage(filePath); // DisplayImage now returns a Panel
                     }
                     else
                     {
-                        MessageBox.Show("فایل انتخابی پشتیبانی نمیشود دوباره تلاش کنید", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        // Handle unsupported file types (perhaps log or show message later on UI thread)
+                        // For now, skipping MessageBox from non-UI thread.
+                    }
+                    if (itemPanel != null)
+                    {
+                        itemPanels.Add(itemPanel);
                     }
                 });
 
+                // Add collected panels to the FlowLayoutPanel on the UI thread
+                if (flowLayoutPanel.InvokeRequired)
+                {
+                    flowLayoutPanel.Invoke((MethodInvoker)delegate {
+                        foreach (var panelToAdd in itemPanels)
+                        {
+                            flowLayoutPanel.Controls.Add(panelToAdd);
+                        }
+                    });
+                }
+                else
+                {
+                    foreach (var panelToAdd in itemPanels)
+                    {
+                        flowLayoutPanel.Controls.Add(panelToAdd);
+                    }
+                }
+
                 flowLayoutPanel.Visible = true;
-                panel1.Controls.Add(flowLayoutPanel);
+                panel1.Controls.Add(flowLayoutPanel); // Add the FlowLayoutPanel to the main panel
             }
             catch (Exception ex)
             {
@@ -332,10 +368,16 @@ namespace Convert_to_dcm
                 {
                     if (Serverhelper.IsServerReachable(SettingsModel))
                     {
-                        var client = DicomClientFactory.Create(SettingsModel.ServerAddress, SettingsModel.ServerPort, SettingsModel.ServerUseTls, SettingsModel.ServerTitle, SettingsModel.ServerAET);
-                        await client.AddRequestAsync(new DicomCStoreRequest(dicomFile));
-                        await client.SendAsync();
-                        return true;
+                        // DicomClient implements IAsyncDisposable and IDisposable
+                        await using (var client = DicomClientFactory.Create(SettingsModel.ServerAddress, SettingsModel.ServerPort, SettingsModel.ServerUseTls, SettingsModel.ServerTitle, SettingsModel.ServerAET))
+                        {
+                            await client.AddRequestAsync(new DicomCStoreRequest(dicomFile));
+                            await client.SendAsync();
+                            // Note: Some DicomClient implementations might require an explicit association release
+                            // or have specific cleanup, but SendAsync should handle the main operation.
+                            // The using block will ensure DisposeAsync() or Dispose() is called.
+                            return true;
+                        }
                     }
                     else
                     {
@@ -417,95 +459,137 @@ namespace Convert_to_dcm
         // ConvertImageToDicom method removed - now in DicomConversionHelper
         // GetBitmapPixels method (later in file) will also be removed.
 
-        private void DisplayImage(string filePath, FlowLayoutPanel panel)
+        private Panel? CreateFlowLayoutItem(Image previewImage, string imagePath)
         {
             try
             {
-                // Load a new Bitmap for each image. Do not use class-level Img field here.
-                using (Image sourceImage = Image.FromFile(filePath)) // Load image from file
+                Panel itemPanel = new Panel
                 {
-                    // CreatePictureBox will make its own copy of the image for the PictureBox
-                    PictureBox? pictureBox = CreatePictureBox(sourceImage);
-                    if (pictureBox != null)
+                    Size = new Size(150, 180), // Example size, adjust as needed
+                    Margin = new Padding(5),
+                    BorderStyle = BorderStyle.FixedSingle
+                };
+
+                PictureBox pictureBox = new PictureBox
+                {
+                    Image = new Bitmap(previewImage), // Create a copy for the PictureBox
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    Dock = DockStyle.Fill, // Fill the panel except for button area
+                    Tag = imagePath // Store imagePath for potential full view later
+                };
+                // Assign generic mouse wheel handler if needed, or a specific one for items
+                pictureBox.MouseWheel += pic1_MouseWheel;
+
+                Button removeButton = new Button
+                {
+                    Text = "X",
+                    Tag = imagePath, // Store imagePath to identify which image to remove
+                    Dock = DockStyle.Bottom,
+                    Height = 25
+                };
+                removeButton.Click += RemoveButton_Click;
+
+                itemPanel.Controls.Add(pictureBox);
+                itemPanel.Controls.Add(removeButton);
+
+                return itemPanel;
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error creating flow layout item for {imagePath}", ex);
+                return null;
+            }
+        }
+
+        private void RemoveButton_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (sender is Button clickedButton && clickedButton.Tag is string imagePath)
+                {
+                    // Remove from the main list of paths
+                    ImagePath.Remove(imagePath);
+
+                    // Find the parent Panel of the button
+                    if (clickedButton.Parent is Panel itemPanel)
                     {
-                        panel.Controls.Add(pictureBox);
+                        // Dispose controls within the itemPanel
+                        foreach (Control ctrl in itemPanel.Controls)
+                        {
+                            if (ctrl is PictureBox pb)
+                            {
+                                pb.Image?.Dispose();
+                            }
+                            ctrl.Dispose();
+                        }
+                        itemPanel.Controls.Clear(); // Not strictly necessary if disposing panel
+
+                        // Remove itemPanel from its parent FlowLayoutPanel
+                        if (itemPanel.Parent is FlowLayoutPanel flowPanel)
+                        {
+                            flowPanel.Controls.Remove(itemPanel);
+                        }
+                        itemPanel.Dispose(); // Dispose the panel itself
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError("Error handling Display Image ", ex);
-                MessageBox.Show($"Error displaying image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogError("Error removing image from layout", ex);
+                MessageBox.Show($"Error removing image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private PictureBox? CreatePictureBox(Image image)
+
+        private Panel? DisplayImage(string filePath) // Now returns Panel, no FlowLayoutPanel param
         {
             try
             {
-                var pictureBox = new PictureBox
+                using (Image sourceImage = Image.FromFile(filePath))
                 {
-                    BorderStyle = BorderStyle.FixedSingle,
-                    Size = new Size(574, 454), // Default size, will be adjusted by zoom
-                    SizeMode = PictureBoxSizeMode.Zoom,
-                    Visible = true,
-                    // Create a new Bitmap for the PictureBox to ensure it has its own copy,
-                    // especially if the source 'image' might be disposed by the caller.
-                    Image = new Bitmap(image)
-                };
-                pictureBox.MouseWheel += pic1_MouseWheel;
-                return pictureBox;
+                    // CreateFlowLayoutItem will make its own copy
+                    return CreateFlowLayoutItem(sourceImage, filePath);
+                }
             }
             catch (Exception ex)
             {
-                LogError("Error handling Create PictureBox ", ex);
-                MessageBox.Show($"Error creating picture box: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogError($"Error displaying image {filePath}", ex);
+                // Potentially show error for this specific image, or collect errors
                 return null;
             }
         }
 
-        private void DisplayPdf(string filePath, FlowLayoutPanel panel)
+        // CreatePictureBox method is now effectively replaced by CreateFlowLayoutItem's PictureBox creation part
+        // If CreatePictureBox was used elsewhere, that needs to be handled. For now, assuming it was only for DisplayImage/Pdf.
+
+        private Panel? DisplayPdf(string filePath) // Now returns Panel, no FlowLayoutPanel param
         {
             try
             {
                 using (var document = PdfDocument.Load(filePath))
                 {
-                    var page = document.Pages[0]; // Access the first page
-                    SizeF pageSize = page.Size;   // Get original page size in points
+                    var page = document.Pages[0];
+                    SizeF pageSize = page.Size;
 
-                    int targetBoxWidth = 574;  // Target width of the PictureBox from CreatePictureBox
-                    int targetBoxHeight = 454; // Target height of the PictureBox from CreatePictureBox
+                    // Target size for the PictureBox within CreateFlowLayoutItem (e.g., 150 width for thumbnail)
+                    // Let CreateFlowLayoutItem handle the final PictureBox sizing, here we just render.
+                    // For a thumbnail, a fixed width might be good, e.g., 150px.
+                    int renderWidth = 150;
+                    int renderHeight = (int)(pageSize.Height * (double)renderWidth / pageSize.Width);
+                    renderHeight = Math.Max(renderHeight, 10); // Ensure min height
 
-                    // Calculate new dimensions maintaining aspect ratio
-                    double ratioX = (double)targetBoxWidth / pageSize.Width;
-                    double ratioY = (double)targetBoxHeight / pageSize.Height;
-                    double ratio = Math.Min(ratioX, ratioY); // Use the smaller ratio to fit entirely
-
-                    int newWidth = (int)(pageSize.Width * ratio);
-                    int newHeight = (int)(pageSize.Height * ratio);
-
-                    // Ensure minimum dimensions if calculation results in zero or very small numbers
-                    newWidth = Math.Max(newWidth, 10);
-                    newHeight = Math.Max(newHeight, 10);
-
-                    // Render the page with the new dimensions.
-                    // PdfiumViewer's Render method takes pixel dimensions.
-                    // The boolean flag (last parameter) is for 'forPrinting'. False for screen.
-                    using (var renderedImage = document.Render(0, newWidth, newHeight, false))
+                    using (var renderedImage = document.Render(0, renderWidth, renderHeight, false))
                     {
-                        // CreatePictureBox will make its own copy
-                        PictureBox? pictureBox = CreatePictureBox(renderedImage);
-                        if (pictureBox != null)
-                        {
-                             panel.Controls.Add(pictureBox);
-                        }
+                        // CreateFlowLayoutItem will make its own copy
+                        return CreateFlowLayoutItem(renderedImage, filePath);
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogError("Error handling Display Pdf ", ex);
-                MessageBox.Show($"Error displaying PDF: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogError($"Error displaying PDF {filePath}", ex);
+                // Potentially show error for this specific PDF
+                return null;
             }
         }
 
@@ -605,27 +689,41 @@ namespace Convert_to_dcm
                 {
                     if (ctrl is FlowLayoutPanel flowPanel)
                     {
-                        foreach(Control pbCtrl in flowPanel.Controls)
+                        foreach(Control itemCtrl in flowPanel.Controls)
                         {
-                            if (pbCtrl is PictureBox pb)
+                            if (itemCtrl is Panel itemPanel) // Each item is now a Panel
                             {
-                                pb.Image?.Dispose(); // Dispose the image
+                                foreach(Control innerCtrl in itemPanel.Controls)
+                                {
+                                    if (innerCtrl is PictureBox pb)
+                                    {
+                                        pb.Image?.Dispose();
+                                    }
+                                    innerCtrl.Dispose(); // Dispose button, picturebox
+                                }
+                                itemPanel.Controls.Clear();
                             }
+                            itemCtrl.Dispose(); // Dispose the itemPanel itself
                         }
-                        flowPanel.Controls.Clear(); // Clear controls from FlowLayoutPanel
+                        flowPanel.Controls.Clear();
+                        flowPanel.Dispose(); // Dispose the FlowLayoutPanel itself
+                    }
+                    else if (ctrl is PictureBox directPb) // Handle older direct PictureBox if any (though unlikely now)
+                    {
+                         directPb.Image?.Dispose();
+                         directPb.Dispose();
                     }
                 }
-                panel1.Controls.Clear(); // Clear the FlowLayoutPanel itself from panel1
+                panel1.Controls.Clear();
                 
                 cachedPatientID = null;
-                // Img = null; // Already handled by the btn_Click finally block logic if needed.
-                // Or, if Img is specifically for a main PictureBox (not in FlowLayoutPanel), manage its lifecycle separately.
-                // For now, let's ensure it's nulled if it was tied to the cleared content.
-                Img?.Dispose(); // Dispose if it holds an image
+                Img?.Dispose();
                 Img = null;
-
                 cachedTags = null;
 
+                // ImagePath list is now the source of truth for displayed images.
+                // It's cleared here. When ResetImageSetting is called before adding new images,
+                // this ensures a fresh start.
                 if (ImagePath != null && ImagePath.Count > 0)
                 {
                     foreach (var item in ImagePath)
